@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "feature_effect_empirical_analysis"
+version = "0.1.0"
+description = ""
+authors = ["Timo Heiß <ti-heiss@t-online.de>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+scikit-learn = "^1.4.1.post1"
+ipykernel = "^6.29.3"
+matplotlib = "^3.8.3"
+numpy = "^1.26.4"
+optuna = "^3.6.0"
+pandas = "^2.2.1"
+seaborn = "^0.13.2"
+nbconvert = "^7.16.3"
+xgboost = "^2.0.3"
+pygam = "^0.9.1"
+pyale = "^1.2.0"
+sympy = "^1.12"
+
+[tool.black]
+line-length = 120
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

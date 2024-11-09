@@ -1,0 +1,7 @@
+notebook_templates/* linguist-documentation
+presentations/* linguist-documentation
+theoretical_foundation/* linguist-documentation
+simulations/* linguist-detectable=false
+*.md linguist-documentation
+*.html linguist-documentation
+*.ipynb linguist-documentation
