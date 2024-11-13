@@ -10,15 +10,15 @@ from sqlalchemy import create_engine
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_squared_error
 
-from feature_effect_empirical_analysis.data_generating.data_generation import generate_data, Groundtruth
-from feature_effect_empirical_analysis.model_training import train_model
-from feature_effect_empirical_analysis.model_eval import eval_model
-from feature_effect_empirical_analysis.utils import (
+from current_research_feature_effects.data_generating.data_generation import generate_data, Groundtruth
+from current_research_feature_effects.model_training import train_model
+from current_research_feature_effects.model_eval import eval_model
+from current_research_feature_effects.utils import (
     parse_sim_params,
     create_and_set_sim_dir,
     parse_storage_and_sim_metadata,
 )
-from feature_effect_empirical_analysis.feature_effects import (
+from current_research_feature_effects.feature_effects import (
     compute_pdps,
     compute_ales,
     compare_effects,

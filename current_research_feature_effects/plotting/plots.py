@@ -9,12 +9,12 @@ import seaborn as sns
 from sklearn.base import BaseEstimator
 from scipy.stats import pearsonr, spearmanr
 
-from feature_effect_empirical_analysis.plotting.utils import (
+from current_research_feature_effects.plotting.utils import (
     set_style,
     get_boxplot_style,
     get_feature_effect_plot_style,
 )
-from feature_effect_empirical_analysis.feature_effects import compute_pdps, compute_ales
+from current_research_feature_effects.feature_effects import compute_pdps, compute_ales
 
 
 def boxplot_model_results(metric: Literal["mse", "mae", "r2"], df: pd.DataFrame) -> plt.Figure:

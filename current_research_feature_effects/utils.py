@@ -6,7 +6,7 @@ import shutil
 import ast
 import numpy as np
 
-from feature_effect_empirical_analysis.mappings import map_modelname_to_estimator, map_dataset_to_groundtruth
+from current_research_feature_effects.mappings import map_modelname_to_estimator, map_dataset_to_groundtruth
 
 
 def parse_sim_params(sim_config: ConfigParser) -> Dict:

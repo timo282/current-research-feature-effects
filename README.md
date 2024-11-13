@@ -40,7 +40,7 @@ poetry env use <path-to-your-python-version>
 
 ## Usage & Helpful Information
 
-To run a simulation, specify your configuration/parameters for the simulation in the `config.ini` file. Then go to the `feature_effect_empirical_analysis` directory, which is the python project and therefore the core of the repository. Run the `main.py` script, which is the entry point of the project. It will automatically run a simulation based on the parameters you have provided in the `config.ini`. It will create a new subdirectory in `simulations` based on the simulation name you specified in the config, it will copy the config-file to this directory, and store all simulation results (trained models as joblib-files, model results, tuning trials, and feature effects results in database-files).
+To run a simulation, specify your configuration/parameters for the simulation in the `config.ini` file. Then go to the `current_research_feature_effects` directory, which is the python project and therefore the core of the repository. Run the `main.py` script, which is the entry point of the project. It will automatically run a simulation based on the parameters you have provided in the `config.ini`. It will create a new subdirectory in `simulations` based on the simulation name you specified in the config, it will copy the config-file to this directory, and store all simulation results (trained models as joblib-files, model results, tuning trials, and feature effects results in database-files).
 
 Random seeds are used throughout the entire simulation to make all results reproducible. Datasets created in each simulation run are not stored, but can simply be recreated afterwards if needed by using the number of the simulation run as seed for the dataset generation.
 

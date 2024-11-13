@@ -7,7 +7,7 @@ import optuna
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import cross_val_score
 
-from feature_effect_empirical_analysis.mappings import suggested_hps_for_model
+from current_research_feature_effects.mappings import suggested_hps_for_model
 
 
 def _objective(

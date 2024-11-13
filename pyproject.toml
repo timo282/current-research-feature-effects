@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "feature_effect_empirical_analysis"
+name = "current_research_feature_effects"
 version = "0.1.0"
 description = ""
 authors = ["Timo Heiß <ti-heiss@t-online.de>"]

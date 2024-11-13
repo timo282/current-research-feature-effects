@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.integrate import quad
 
-from feature_effect_empirical_analysis.data_generating.data_generation import Groundtruth
+from current_research_feature_effects.data_generating.data_generation import Groundtruth
 
 
 class Friedman1Groundtruth(Groundtruth):

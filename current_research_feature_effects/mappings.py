@@ -9,13 +9,13 @@ from pygam import LinearGAM, s, l, te
 from xgboost import XGBRegressor
 import optuna
 
-from feature_effect_empirical_analysis.data_generating.data_generation import Groundtruth
-from feature_effect_empirical_analysis.data_generating.simple import (
+from current_research_feature_effects.data_generating.data_generation import Groundtruth
+from current_research_feature_effects.data_generating.simple import (
     SimpleAdditiveGroundtruth,
     SimpleInteractionGroundtruth,
     SimpleCombinedGroundtruth,
 )
-from feature_effect_empirical_analysis.data_generating.friedman1 import Friedman1Groundtruth
+from current_research_feature_effects.data_generating.friedman1 import Friedman1Groundtruth
 
 
 def map_dataset_to_groundtruth(
