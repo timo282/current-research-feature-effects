@@ -68,7 +68,7 @@ def simulate(
                 feature_names = groundtruth.feature_names
                 grid_intervals = config.getint("feature_effects", "grid_intervals")
                 center_curves = config["feature_effects"].getboolean("centered")
-                print(center_curves)
+
                 ale_groundtruth = compute_ales(
                     groundtruth, X_train, feature_names, grid_intervals=grid_intervals, center_curves=center_curves
                 )
