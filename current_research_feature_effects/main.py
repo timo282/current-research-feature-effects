@@ -66,8 +66,19 @@ def simulate(
 
                 # calulate feature effects of groundtruth
                 feature_names = groundtruth.feature_names
-                pdp_groundtruth = compute_pdps(groundtruth, X_train, feature_names, config)
-                ale_groundtruth = compute_ales(groundtruth, X_train, feature_names, config)
+                grid_intervals = config.getint("feature_effects", "grid_intervals")
+                center_curves = config["feature_effects"].getboolean("centered")
+                print(center_curves)
+                ale_groundtruth = compute_ales(
+                    groundtruth, X_train, feature_names, grid_intervals=grid_intervals, center_curves=center_curves
+                )
+                pdp_groundtruth = compute_pdps(
+                    groundtruth,
+                    X_train,
+                    feature_names,
+                    grid_values=[ale["grid_values"] for ale in ale_groundtruth],
+                    center_curves=center_curves,
+                )
 
                 for model_str, model in models[groundtruth.__class__.__name__]:
                     model_name = f"{model_str}_{sim_no+1}_{n_train}_{int(snr)}"
@@ -189,7 +200,7 @@ if __name__ == "__main__":
     groundtruths = sim_params["groundtruths"]
 
     # Number of processes
-    num_processes = cpu_count()
+    num_processes = min(len(groundtruths), cpu_count())
 
     # Create a pool of processes and map groundtruths to the processing function
     with Pool(processes=num_processes) as pool:
