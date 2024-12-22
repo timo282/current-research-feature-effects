@@ -194,12 +194,8 @@ def simulate(
 
 if __name__ == "__main__":
     sim_params = parse_sim_params(sim_config)
-
     create_and_set_sim_dir(sim_config)
-
     groundtruths = sim_params["groundtruths"]
-
-    # Number of processes
     num_processes = min(len(groundtruths), cpu_count())
 
     # Create a pool of processes and map groundtruths to the processing function
