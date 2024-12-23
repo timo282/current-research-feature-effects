@@ -16,19 +16,36 @@ from current_research_feature_effects.data_generating.simple import (
     SimpleCombinedGroundtruth,
 )
 from current_research_feature_effects.data_generating.friedman1 import Friedman1Groundtruth
+from current_research_feature_effects.data_generating.physics_data import NewtonUniversalGravitationGroundtruth
 
 
 def map_dataset_to_groundtruth(
-    dataset: str, marginals: List[Tuple[Literal["normal", "uniform"], Tuple]], corr_matrix: np.array, name: str = None
+    dataset: str,
+    marginals: List[Tuple[Literal["normal", "uniform", "loguniform"], Tuple]],
+    corr_matrix: np.array,
+    feature_names: List[str] = None,
+    name: str = None,
 ) -> Groundtruth:
     if dataset == "SimpleAdditiveGroundtruth":
-        return SimpleAdditiveGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleAdditiveGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "SimpleInteractionGroundtruth":
-        return SimpleInteractionGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleInteractionGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "SimpleCombinedGroundtruth":
-        return SimpleCombinedGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleCombinedGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "Friedman1Groundtruth":
-        return Friedman1Groundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return Friedman1Groundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
+    if dataset == "NewtonUniversalGravitationGroundtruth":
+        return NewtonUniversalGravitationGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
 
 
 def map_modelname_to_estimator(model_name: str) -> BaseEstimator:

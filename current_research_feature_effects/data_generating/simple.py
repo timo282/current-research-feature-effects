@@ -36,7 +36,7 @@ class SimpleAdditiveGroundtruth(Groundtruth):
 class SimpleInteractionGroundtruth(Groundtruth):
     """
     A simple interaction groundtruth specified by the formula::
-    `g(x) = x_1 * x_2$` and optionally additional noise features.
+    `g(x) = x_1 * x_2` and optionally additional noise features.
     """
 
     def predict(self, X) -> np.ndarray:

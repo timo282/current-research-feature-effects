@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 from typing import Callable, Literal, List, Optional, Tuple
-from scipy.stats import norm, uniform
+import warnings
+from scipy.stats import norm, uniform, loguniform
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import train_test_split
@@ -37,7 +38,7 @@ class Groundtruth(ABC, BaseEstimator):
 
     def __init__(
         self,
-        marginal_distributions: List[Tuple[Literal["normal", "uniform"], Tuple]],
+        marginal_distributions: List[Tuple[Literal["normal", "uniform", "loguniform"], Tuple]],
         correlation_matrix: np.ndarray,
         feature_names: List[str] = None,
         name: str = None,
@@ -55,12 +56,16 @@ class Groundtruth(ABC, BaseEstimator):
         self._feature_names = (
             feature_names if feature_names is not None else [f"x_{i + 1}" for i in range(self._n_features)]
         )
-        self._name = name if name is not None else (
-            f"{self.__class__.__name__}({self.marginal_distributions}, {self.correlation_matrix.tolist()})".replace(
-                " ", ""
+        self._name = (
+            name
+            if name is not None
+            else (
+                f"{self.__class__.__name__}({self.marginal_distributions}, {self.correlation_matrix.tolist()})".replace(
+                    " ", ""
+                )
+                .replace('"', "")
+                .replace("'", "")
             )
-            .replace('"', "")
-            .replace("'", "")
         )
 
     def __sklearn_is_fitted__(self):
@@ -140,7 +145,7 @@ class Groundtruth(ABC, BaseEstimator):
 
 
 def _transform_to_target_distribution(
-    data: np.ndarray, dist_type: Literal["normal", "uniform"], params: Tuple
+    data: np.ndarray, dist_type: Literal["normal", "uniform", "loguniform"], params: Tuple
 ) -> np.ndarray:
     """
     Transform standard normal data to a target distribution using inverse CDF.
@@ -150,9 +155,12 @@ def _transform_to_target_distribution(
     data : np.ndarray
         The data to transform.
     dist_type : str
-        The target distribution type. Supported distributions are 'normal' and 'uniform'.
+        The target distribution type. Supported distributions are 'normal', 'uniform', and 'loguniform'.
     params : tuple
         Tuple containing the distribution parameters.
+        - For normal: (mean, std)
+        - For uniform: (low, high)
+        - For loguniform: (low_exp, high_exp) where bounds are 10^low_exp and 10^high_exp
 
     Returns
     -------
@@ -165,7 +173,13 @@ def _transform_to_target_distribution(
     elif dist_type == "uniform":
         low, high = params
         # Transform standard normal data to uniform
+        warnings.warn("Correlations > 0 may not be preserved by the transformation.", UserWarning)
         return uniform.ppf(norm.cdf(data), loc=low, scale=high - low)
+    elif dist_type == "loguniform":
+        low, high = params
+        # Transform standard normal data to loguniform
+        warnings.warn("Correlations > 0 may not be preserved by the transformation.", UserWarning)
+        return loguniform.ppf(norm.cdf(data), a=low, b=high)
     else:
         raise ValueError(f"Unsupported distribution type {dist_type}")
 

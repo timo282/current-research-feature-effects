@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import shutil
 import ast
+import yaml
 import numpy as np
 
 from current_research_feature_effects.mappings import map_modelname_to_estimator, map_dataset_to_groundtruth
@@ -24,21 +25,27 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
     """
     param_dict = {}
     model_names = ast.literal_eval(sim_config["simulation_params"]["models"])
-    datasets = sim_config.get("simulation_params", "datasets").split(",")
-    dataset_names = sim_config.get("simulation_params", "dataset_names").split(",")
-    marginals = ast.literal_eval(sim_config["simulation_params"]["marginals"])
-    corr_matrices = [
-        np.array(element) for element in ast.literal_eval(sim_config["simulation_params"]["correlation_matrices"])
-    ]
+    datasets_config_path = Path(sim_config["simulation_params"]["datasets_yaml"])
+
     param_dict["n_sim"] = sim_config.getint("simulation_params", "n_sim")
     param_dict["n_train"] = [int(x) for x in sim_config.get("simulation_params", "n_train").split(",")]
     param_dict["snr"] = [float(x) for x in sim_config.get("simulation_params", "snr").split(",")]
     param_dict["models_config"] = {
         k: [(model_name, map_modelname_to_estimator(model_name)) for model_name in v] for k, v in model_names.items()
     }
+
+    with open(datasets_config_path, "r") as file:
+        datasets_config = yaml.safe_load(file)
+
     param_dict["groundtruths"] = [
-        map_dataset_to_groundtruth(d, m, c, name=n)
-        for n, d, m, c in zip(dataset_names, datasets, marginals, corr_matrices)
+        map_dataset_to_groundtruth(
+            config["groundtruth"],
+            [(v["marginal"]["type"], tuple(v["marginal"]["params"])) for v in config["features"].values()],
+            np.array(config["correlation_matrix"]),
+            feature_names=list(config["features"].keys()),
+            name=name,
+        )
+        for name, config in datasets_config.items()
     ]
 
     return param_dict
