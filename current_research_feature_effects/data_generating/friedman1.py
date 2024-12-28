@@ -33,8 +33,7 @@ class Friedman1Groundtruth(Groundtruth):
         """
         if isinstance(X, pd.DataFrame):
             X = X.values
-        if X.shape[1] != 5:
-            raise ValueError("Input must have 5 features.")
+
         return 10 * np.sin(np.pi * X[:, 0] * X[:, 1]) + 20 * (X[:, 2] - 0.5) ** 2 + 10 * X[:, 3] + 5 * X[:, 4]
 
     def get_theoretical_partial_dependence(self, feature: Literal["x_1", "x_2", "x_3", "x_4", "x_5"]) -> Callable:

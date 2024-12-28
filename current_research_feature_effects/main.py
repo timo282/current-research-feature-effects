@@ -1,7 +1,7 @@
 from configparser import ConfigParser
 from pathlib import Path
 import os
-from typing_extensions import List, Tuple
+from typing_extensions import List, Dict
 from multiprocessing import Pool, cpu_count
 from joblib import dump
 import numpy as np
@@ -29,7 +29,7 @@ sim_config.read("config.ini")
 
 
 def simulate(
-    models: List[Tuple[str, BaseEstimator]],
+    models: Dict[str, Dict],
     groundtruth: Groundtruth,
     n_sim: int,
     n_trains: List[int],
@@ -46,6 +46,17 @@ def simulate(
     engine_model_results = create_engine(f"sqlite:///{str(groundtruth)}{sim_metatadata['model_results_storage']}")
     engine_effects_results = create_engine(f"sqlite:///{str(groundtruth)}{sim_metatadata['effects_results_storage']}")
 
+    # save groundtruth
+    dump(
+        groundtruth,
+        Path(os.getcwd()) / str(groundtruth) / "groundtruth.joblib",
+    )
+
+    # calulate feature effects of groundtruth
+    feature_names = groundtruth.feature_names
+    grid_intervals = config.getint("feature_effects", "grid_intervals")
+    center_curves = config["feature_effects"].getboolean("centered")
+
     for sim_no in range(n_sim):
         for n_train in n_trains:
             for snr in snrs:
@@ -58,17 +69,6 @@ def simulate(
                     seed=sim_no,
                 )
 
-                # save groundtruth
-                dump(
-                    groundtruth,
-                    Path(os.getcwd()) / str(groundtruth) / "groundtruth.joblib",
-                )
-
-                # calulate feature effects of groundtruth
-                feature_names = groundtruth.feature_names
-                grid_intervals = config.getint("feature_effects", "grid_intervals")
-                center_curves = config["feature_effects"].getboolean("centered")
-
                 ale_groundtruth = compute_ales(
                     groundtruth, X_train, feature_names, grid_intervals=grid_intervals, center_curves=center_curves
                 )
@@ -80,8 +80,17 @@ def simulate(
                     center_curves=center_curves,
                 )
 
-                for model_str, model in models[groundtruth.__class__.__name__]:
+                for model_str in models:
                     model_name = f"{model_str}_{sim_no+1}_{n_train}_{int(snr)}"
+                    model: BaseEstimator = models[model_str]["model"]
+
+                    if models[model_str]["model_params"] == "to_tune":
+                        ...
+                        model_params = ...
+                    else:
+                        model_params = models[model_str]["model_params"]
+
+                    model.set_params(**model_params)
 
                     # train and tune model
                     model = train_model(

@@ -3,11 +3,10 @@ from typing import Dict
 from pathlib import Path
 import os
 import shutil
-import ast
 import yaml
 import numpy as np
 
-from current_research_feature_effects.mappings import map_modelname_to_estimator, map_dataset_to_groundtruth
+from current_research_feature_effects.mappings import map_dataset_to_groundtruth, map_modelname_to_estimator
 
 
 def parse_sim_params(sim_config: ConfigParser) -> Dict:
@@ -24,18 +23,22 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
         Dictionary of simulation parameters.
     """
     param_dict = {}
-    model_names = ast.literal_eval(sim_config["simulation_params"]["models"])
+    models_config_path = Path(sim_config["simulation_params"]["models_yaml"])
     datasets_config_path = Path(sim_config["simulation_params"]["datasets_yaml"])
 
     param_dict["n_sim"] = sim_config.getint("simulation_params", "n_sim")
     param_dict["n_train"] = [int(x) for x in sim_config.get("simulation_params", "n_train").split(",")]
     param_dict["snr"] = [float(x) for x in sim_config.get("simulation_params", "snr").split(",")]
-    param_dict["models_config"] = {
-        k: [(model_name, map_modelname_to_estimator(model_name)) for model_name in v] for k, v in model_names.items()
-    }
+
+    with open(models_config_path, "r") as file:
+        models_config: Dict = yaml.safe_load(file)
+
+    for model in models_config.keys():
+        models_config[model]["model"] = map_modelname_to_estimator(models_config[model]["model"])
+    param_dict["models_config"] = models_config
 
     with open(datasets_config_path, "r") as file:
-        datasets_config = yaml.safe_load(file)
+        datasets_config: Dict = yaml.safe_load(file)
 
     param_dict["groundtruths"] = [
         map_dataset_to_groundtruth(
