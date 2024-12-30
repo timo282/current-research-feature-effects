@@ -139,6 +139,42 @@ class Groundtruth(ABC, BaseEstimator):
             The theoretical partial dependence function for the feature.
         """
 
+    def get_theoretical_quantiles(self, feature: str, quantiles: np.ndarray) -> np.ndarray:
+        """Get theoretical quantiles for a feature's marginal distribution.
+
+        Parameters
+        ----------
+        feature : str
+            The feature for which to compute the quantiles.
+        quantiles : np.ndarray
+            Array of quantile values between 0 and 1.
+
+        Returns
+        -------
+        np.ndarray
+            The theoretical quantile values for the feature.
+        """
+        if feature not in self.feature_names:
+            raise ValueError(f"Feature {feature} not found in {self.feature_names}")
+
+        if not np.all((quantiles >= 0) & (quantiles <= 1)):
+            raise ValueError("Quantiles must be between 0 and 1")
+
+        feature_idx = self.feature_names.index(feature)
+        dist_type, params = self.marginal_distributions[feature_idx]
+
+        if dist_type == "normal":
+            mean, std = params
+            return norm.ppf(quantiles, loc=mean, scale=std)
+        elif dist_type == "uniform":
+            low, high = params
+            return uniform.ppf(quantiles, loc=low, scale=high - low)
+        elif dist_type == "loguniform":
+            low, high = params
+            return loguniform.ppf(quantiles, low, high)
+        else:
+            raise ValueError(f"Unsupported distribution type: {dist_type}")
+
     def __str__(self):
         """Return dataset name as string."""
         return self.name
