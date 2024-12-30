@@ -9,14 +9,14 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_squared_error
+import optuna
 
 from current_research_feature_effects.data_generating.data_generation import generate_data, Groundtruth
-from current_research_feature_effects.model_training import train_model
+from current_research_feature_effects.model_training import optimize
 from current_research_feature_effects.model_eval import eval_model
 from current_research_feature_effects.utils import (
     parse_sim_params,
     create_and_set_sim_dir,
-    parse_storage_and_sim_metadata,
 )
 from current_research_feature_effects.feature_effects import (
     compute_pdps,
@@ -37,14 +37,13 @@ def simulate(
     config: ConfigParser,
 ):
     np.random.seed(42)
-    sim_metatadata = parse_storage_and_sim_metadata(config)
 
     # create dir for dataset
     os.mkdir(str(groundtruth))
 
     # create databases for results
-    engine_model_results = create_engine(f"sqlite:///{str(groundtruth)}{sim_metatadata['model_results_storage']}")
-    engine_effects_results = create_engine(f"sqlite:///{str(groundtruth)}{sim_metatadata['effects_results_storage']}")
+    engine_model_results = create_engine(f"sqlite:///{str(groundtruth)}{config.get('storage', 'model_results')}")
+    engine_effects_results = create_engine(f"sqlite:///{str(groundtruth)}{config.get('storage', 'effects_results')}")
 
     # save groundtruth
     dump(
@@ -64,7 +63,7 @@ def simulate(
                 X_train, y_train, X_test, y_test = generate_data(
                     groundtruth=groundtruth,
                     n_train=n_train,
-                    n_test=sim_metatadata["n_test"],
+                    n_test=config.getint("simulation_metadata", "n_test"),
                     snr=snr,
                     seed=sim_no,
                 )
@@ -85,31 +84,50 @@ def simulate(
                     model: BaseEstimator = models[model_str]["model"]
 
                     if models[model_str]["model_params"] == "to_tune":
-                        ...
-                        model_params = ...
+                        tuning_studies_dir = config.get('storage', 'tuning_studies_folder')
+                        os.makedirs(Path(os.getcwd()) / tuning_studies_dir, exist_ok=True)
+                        study_name = f"{model_str}_{n_train}_{int(snr)}"
+                        storage_name = f"sqlite:///{str(groundtruth)}/{tuning_studies_dir}/{model_str}.db"
+                        try:
+                            model_params = optuna.load_study(
+                                study_name=study_name,
+                                storage=storage_name,
+                            ).best_params
+                        except KeyError as e:
+                            if str(e) == "Record does not exist.":
+                                X_tuning_train, y_tuning_train, X_tuning_val, y_tuning_val = generate_data(
+                                    groundtruth=groundtruth,
+                                    n_train=n_train,
+                                    n_test=config.get("simulation_metadata", "n_tuning_val"),
+                                    snr=snr,
+                                    seed=999999,
+                                )
+                                model_params = optimize(
+                                    model=model,
+                                    X_train=X_tuning_train,
+                                    y_train=y_tuning_train,
+                                    X_val=X_tuning_val,
+                                    y_val=y_tuning_val,
+                                    n_trials=config.get("simulation_metadata", "n_tuning_trials"),
+                                    metric=config.get("simulation_metadata", "tuning_metric"),
+                                    direction=config.get("simulation_metadata", "tuning_direction"),
+                                    study_name=study_name,
+                                    storage_name=storage_name,
+                                ).best_params
+                            else:
+                                raise
                     else:
                         model_params = models[model_str]["model_params"]
 
                     model.set_params(**model_params)
 
-                    # train and tune model
-                    model = train_model(
-                        model,
-                        X_train,
-                        y_train,
-                        n_trials=sim_metatadata["n_trials"],
-                        cv=sim_metatadata["cv"],
-                        metric=sim_metatadata["metric"],
-                        direction=sim_metatadata["direction"],
-                        tuning_studies_folder=Path(str(groundtruth)) / Path(sim_metatadata["tuning_studies_folder"]),
-                        model_name=model_name,
-                    )
+                    model.fit(X_train, y_train)
 
                     # save model
-                    os.makedirs(Path(str(groundtruth)) / sim_metatadata["model_folder"], exist_ok=True)
+                    os.makedirs(Path(str(groundtruth)) / config.get("storage", "models"), exist_ok=True)
                     dump(
                         model,
-                        Path(os.getcwd()) / str(groundtruth) / sim_metatadata["model_folder"] / f"{model_name}.joblib",
+                        Path(os.getcwd()) / str(groundtruth) / config.get("storage", "models") / f"{model_name}.joblib",
                     )
 
                     # evaluate model
@@ -135,37 +153,6 @@ def simulate(
                     df_model_result.to_sql(
                         "model_results",
                         con=engine_model_results,
-                        if_exists="append",
-                    )
-
-                    # calculate and compare pdps to groundtruth
-                    pdp = compute_pdps(model, X_train, feature_names, config)
-                    pdp_comparison = compare_effects(
-                        pdp_groundtruth,
-                        pdp,
-                        mean_squared_error,
-                        center_curves=config["errors"].getboolean("centered"),
-                    )
-                    df_pdp_result = pd.concat(
-                        (
-                            pd.DataFrame(
-                                {
-                                    "model_id": [model_name],
-                                    "model": [model_str],
-                                    "simulation": [sim_no + 1],
-                                    "n_train": [n_train],
-                                    "snr": [snr],
-                                }
-                            ),
-                            pdp_comparison,
-                        ),
-                        axis=1,
-                    )
-
-                    # save pdp results
-                    df_pdp_result.to_sql(
-                        "pdp_results",
-                        con=engine_effects_results,
                         if_exists="append",
                     )
 
@@ -196,6 +183,37 @@ def simulate(
                     # save ale results
                     df_ale_result.to_sql(
                         "ale_results",
+                        con=engine_effects_results,
+                        if_exists="append",
+                    )
+
+                    # calculate and compare pdps to groundtruth
+                    pdp = compute_pdps(model, X_train, feature_names, config)
+                    pdp_comparison = compare_effects(
+                        pdp_groundtruth,
+                        pdp,
+                        mean_squared_error,
+                        center_curves=config["errors"].getboolean("centered"),
+                    )
+                    df_pdp_result = pd.concat(
+                        (
+                            pd.DataFrame(
+                                {
+                                    "model_id": [model_name],
+                                    "model": [model_str],
+                                    "simulation": [sim_no + 1],
+                                    "n_train": [n_train],
+                                    "snr": [snr],
+                                }
+                            ),
+                            pdp_comparison,
+                        ),
+                        axis=1,
+                    )
+
+                    # save pdp results
+                    df_pdp_result.to_sql(
+                        "pdp_results",
                         con=engine_effects_results,
                         if_exists="append",
                     )

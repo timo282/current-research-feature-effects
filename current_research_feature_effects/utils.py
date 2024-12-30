@@ -54,34 +54,6 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
     return param_dict
 
 
-def parse_storage_and_sim_metadata(config: ConfigParser) -> Dict:
-    """Parse storage and simulation metadata from configuration file.
-
-    Parameters
-    ----------
-    sim_config : ConfigParser
-        Config containing storage and simulation metadata.
-
-    Returns
-    -------
-    Dict
-        Dictionary of storage and simulation metadata.
-    """
-    metadata_dict = {}
-    metadata_dict["model_folder"] = config.get("storage", "models")
-    metadata_dict["model_results_storage"] = config.get("storage", "model_results")
-    metadata_dict["effects_results_storage"] = config.get("storage", "effects_results")
-
-    metadata_dict["n_trials"] = config.getint("simulation_metadata", "n_tuning_trials")
-    metadata_dict["cv"] = config.getint("simulation_metadata", "n_tuning_folds")
-    metadata_dict["metric"] = config.get("simulation_metadata", "tuning_metric")
-    metadata_dict["direction"] = config.get("simulation_metadata", "tuning_direction")
-    metadata_dict["tuning_studies_folder"] = config.get("storage", "tuning_studies_folder")
-    metadata_dict["n_test"] = config.getint("simulation_metadata", "n_test")
-
-    return metadata_dict
-
-
 def create_and_set_sim_dir(sim_config: ConfigParser) -> None:
     """Create and set simulation directory.
 
