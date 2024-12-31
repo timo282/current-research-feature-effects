@@ -1,4 +1,4 @@
-from typing_extensions import List, Dict, Callable
+from typing_extensions import List, Dict, Callable, Tuple
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -100,6 +100,45 @@ def _accumulated_local_effects(
     res_df = res_df.sort_index().assign(eff=res_df["eff"] - mean_mv_avg)
 
     return res_df
+
+
+def get_modified_grids(
+    base_grids: List[np.ndarray], Xs: List[np.ndarray], feature_names: List[str]
+) -> Tuple[np.ndarray]:
+    """
+    Get modified grids based on the minimum and maximum values of the datasets.
+
+    Parameters
+    ----------
+    base_grids : List[np.ndarray]
+        List of base grids to be modified.
+    Xs : List[np.ndarray]
+        List of datasets to compute the minimum and maximum values from.
+    feature_names : List[str]
+        Names of features to compute the minimum and maximum values from.
+
+    Returns
+    -------
+    Tuple[np.ndarray]
+        Tuple of modified grids based on the minimum and maximum values of the datasets,
+        length of the tuple is equal to the number of datasets.
+    """
+    mins = np.array([[np.min(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
+    maxs = np.array([[np.max(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
+
+    common_mins = mins.max(axis=1)
+    common_maxs = maxs.min(axis=1)
+
+    dataset_grids = [[] for _ in range(len(Xs))]
+    for i in range(len(feature_names)):
+        base_grid = base_grids[i]
+        filtered_grid = base_grid[(base_grid > common_mins[i]) & (base_grid < common_maxs[i])]
+
+        for j in range(len(Xs)):
+            specific_grid = np.concatenate([[mins[i, j]], filtered_grid, [maxs[i, j]]])
+            dataset_grids[j].append(specific_grid)
+
+    return tuple(dataset_grids)
 
 
 def compute_pdps(
