@@ -27,7 +27,13 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
     datasets_config_path = Path(sim_config["simulation_params"]["datasets_yaml"])
 
     param_dict["n_sim"] = sim_config.getint("simulation_params", "n_sim")
-    param_dict["n_train"] = [int(x) for x in sim_config.get("simulation_params", "n_train").split(",")]
+    param_dict["n_train_val"] = [
+        (int(n_train), int(n_val))
+        for n_train, n_val in zip(
+            sim_config.get("simulation_params", "n_train").split(","),
+            sim_config.get("simulation_params", "n_val").split(","),
+        )
+    ]
     param_dict["snr"] = [float(x) for x in sim_config.get("simulation_params", "snr").split(",")]
 
     with open(models_config_path, "r") as file:

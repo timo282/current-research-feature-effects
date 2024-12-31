@@ -271,8 +271,9 @@ def generate_data(
     n_test: int,
     snr: float,
     seed: int,
+    n_val: int = None,
 ):
-    """Generate data for training and testing based on the specified groundtruth,
+    """Generate data for training, validation (optional), and testing based on the specified groundtruth
     and signal-to-noise ratio for noise standard deviation.
 
     Parameters
@@ -287,22 +288,36 @@ def generate_data(
         Signal-to-noise-ratio defining the amount of noise to add to the data.
     seed : int
         Random seed to use for reproducibility.
+    n_val : int, optional
+        Number of validation samples to generate, by default None. if None, no validation data is generated.
 
     Returns
     -------
-    X_train, y_train, X_test, y_test : np.ndarray
-        The generated training and test data.
+    tuple
+        If n_val is None:
+            X_train, y_train, X_test, y_test : Training and test data
+        If n_val is provided:
+            X_train, y_train, X_val, y_val, X_test, y_test : Training, validation and test data
     """
+    total_samples = n_train + n_test + (n_val if n_val is not None else 0)
 
     X, y = _generate_samples(
         groundtruth=groundtruth,
-        n_samples=n_train + n_test,
+        n_samples=total_samples,
         noise_sd=_get_noise_sd_from_snr(snr, groundtruth),
         random_state=seed,
     )
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=42)
 
-    return X_train, y_train, X_test, y_test
+    if n_val is None:
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=n_test, random_state=42)
+
+        return X_train, y_train, X_test, y_test
+
+    else:
+        X_trainval, X_test, y_trainval, y_test = train_test_split(X, y, test_size=n_test, random_state=42)
+        X_train, X_val, y_train, y_val = train_test_split(X_trainval, y_trainval, test_size=n_val, random_state=42)
+
+        return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 def _get_noise_sd_from_snr(snr: int, groundtruth: Groundtruth) -> float:
