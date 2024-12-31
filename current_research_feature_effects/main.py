@@ -60,7 +60,7 @@ def simulate(
         n_train=config.getint("simulation_metadata", "n_mc"),
         n_test=1,
         snr=0,
-        seed=config.getint("simulation_metadata", "mc_seed"),
+        seed=config.getint("simulation_metadata", "mc_data_seed"),
     )
 
     for sim_no in range(n_sim):
