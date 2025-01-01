@@ -8,7 +8,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "~3.11"
 scikit-learn = "^1.4.1.post1"
-matplotlib = "^3.8.3"
 numpy = "^1.26.4"
 optuna = "^3.6.0"
 pandas = "^2.2.1"
@@ -16,6 +15,7 @@ seaborn = "^0.13.2"
 xgboost = "^2.0.3"
 pygam = "^0.9.1"
 sympy = "^1.12"
+matplotlib = "^3.10.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"

@@ -63,57 +63,37 @@ Friedman1:
     - [0, 0, 0, 0, 0, 1, 0]
     - [0, 0, 0, 0, 0, 0, 1]
 
-FeynmanPhysics:
-  groundtruth: NewtonUniversalGravitationGroundtruth
+FeynmanI.29.16:
+  groundtruth: WaveInterferenceGroundtruth
   features:
-    m_1:
-      marginal:
-        type: loguniform
-        params: [1, 1000]
-    m_2:
-      marginal:
-        type: loguniform
-        params: [1, 1000]
     x_1:
       marginal:
         type: loguniform
-        params: [1, 10]
+        params: [0.1, 10]
     x_2:
       marginal:
         type: loguniform
-        params: [1, 10]
-    y_1:
+        params: [0.1, 10]
+    theta_1:
       marginal:
-        type: loguniform
-        params: [1, 10]
-    y_2:
+        type: uniform
+        params: [0, 6.2831853]
+    theta_2:
       marginal:
-        type: loguniform
-        params: [1, 10]
-    z_1:
-      marginal:
-        type: loguniform
-        params: [1, 10]
-    z_2:
-      marginal:
-        type: loguniform
-        params: [1, 10]
+        type: uniform
+        params: [0, 6.2831853]
     d_1:
       marginal:
-        type: loguniform
-        params: [1, 10]
-    d_2:  
+        type: uniform
+        params: [0, 1]
+    d_2:
       marginal:
-        type: loguniform
-        params: [1, 10]
+        type: uniform
+        params: [0, 1]
   correlation_matrix:
-    - [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    - [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]
-    - [0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
-    - [0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
-    - [0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
-    - [0, 0, 0, 0, 0, 1, 0, 0, 0, 0]
-    - [0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
-    - [0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
-    - [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
-    - [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    - [1, 0, 0, 0, 0, 0]
+    - [0, 1, 0, 0, 0, 0]
+    - [0, 0, 1, 0, 0, 0]
+    - [0, 0, 0, 1, 0, 0]
+    - [0, 0, 0, 0, 1, 0]
+    - [0, 0, 0, 0, 0, 1]

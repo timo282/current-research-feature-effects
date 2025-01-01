@@ -10,7 +10,8 @@ class NewtonUniversalGravitationGroundtruth(Groundtruth):
     """
     Newton's law of universal gravitation groundtruth specified by the formula::
     `g(x) = G * (m1 * m2) / ((x2 - x1)**2 + (y2 -y1)**2 + (z2 - z1)**2)`
-    where G is the gravitational constant.
+    where G is the gravitational constant
+    (Feynman I.9.18).
     """
 
     def predict(self, X) -> np.ndarray:
@@ -40,3 +41,37 @@ class NewtonUniversalGravitationGroundtruth(Groundtruth):
         self, feature: Literal["m_1", "m_2", "x_1", "x_2", "y_1", "y_2", "z_1", "z_2"]
     ) -> Callable:
         raise NotImplementedError("Theoretical partial dependence not implemented for NewtonUniversalGravitation.")
+
+
+class WaveInterferenceGroundtruth(Groundtruth):
+    """
+    Wave interference groundtruth specified by the formula:
+    `x = sqrt(x1^2 + x2^2 + 2*x1*x2*cos(theta1 - theta2))`
+    where x1, x2 are wavelengths and theta1, theta2 are angles
+    (Feynman I.29.16).
+    """
+
+    def predict(self, X) -> np.ndarray:
+        """
+        Returns target value (y) of the groundtruth for each sample in X.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, 4)
+            The input samples with columns [wavelength1, wavelength2, angle1, angle2].
+
+        Returns
+        -------
+        y_pred : ndarray of shape (n_samples,)
+            The target values.
+        """
+        if isinstance(X, pd.DataFrame):
+            X = X.values
+
+        x1, x2 = X[:, 0], X[:, 1]
+        theta1, theta2 = X[:, 2], X[:, 3]
+
+        return np.sqrt(x1**2 + x2**2 + 2 * x1 * x2 * np.cos(theta1 - theta2))
+
+    def get_theoretical_partial_dependence(self, feature: Literal["x_1", "x_2", "theta_1", "theta_2"]) -> Callable:
+        raise NotImplementedError("Theoretical partial dependence not implemented for WaveInterference.")

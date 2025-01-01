@@ -15,7 +15,10 @@ from current_research_feature_effects.data_generating.simple import (
     SimpleCombinedGroundtruth,
 )
 from current_research_feature_effects.data_generating.friedman1 import Friedman1Groundtruth
-from current_research_feature_effects.data_generating.physics_data import NewtonUniversalGravitationGroundtruth
+from current_research_feature_effects.data_generating.physics_data import (
+    NewtonUniversalGravitationGroundtruth,
+    WaveInterferenceGroundtruth,
+)
 
 
 def map_dataset_to_groundtruth(
@@ -43,6 +46,10 @@ def map_dataset_to_groundtruth(
         )
     if dataset == "NewtonUniversalGravitationGroundtruth":
         return NewtonUniversalGravitationGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
+    if dataset == "WaveInterferenceGroundtruth":
+        return WaveInterferenceGroundtruth(
             marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
         )
 

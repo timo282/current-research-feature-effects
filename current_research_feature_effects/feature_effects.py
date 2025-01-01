@@ -184,6 +184,7 @@ def compute_pdps(
 
         if remove_first_last:
             pdp_feature["effect"] = pdp_feature["effect"][1:-1]
+            pdp_feature["grid_values"] = pdp_feature["grid_values"][1:-1]
 
         if center_curves:
             pdp_feature["effect"] -= np.mean(pdp_feature["effect"])

@@ -209,12 +209,16 @@ def _transform_to_target_distribution(
     elif dist_type == "uniform":
         low, high = params
         # Transform standard normal data to uniform
-        warnings.warn("Correlations > 0 may not be preserved by the transformation.", UserWarning)
+        warnings.warn(
+            f"Correlations > 0 may not be preserved by the transformation (distribution: {dist_type}).", UserWarning
+        )
         return uniform.ppf(norm.cdf(data), loc=low, scale=high - low)
     elif dist_type == "loguniform":
         low, high = params
         # Transform standard normal data to loguniform
-        warnings.warn("Correlations > 0 may not be preserved by the transformation.", UserWarning)
+        warnings.warn(
+            f"Correlations > 0 may not be preserved by the transformation (distribution: {dist_type}).", UserWarning
+        )
         return loguniform.ppf(norm.cdf(data), a=low, b=high)
     else:
         raise ValueError(f"Unsupported distribution type {dist_type}")
@@ -339,6 +343,6 @@ def _get_noise_sd_from_snr(snr: int, groundtruth: Groundtruth) -> float:
     _, y = _generate_samples(n_samples=100000, groundtruth=groundtruth, noise_sd=0.0)
 
     signal_std = np.std(y)
-    noise_std = signal_std / snr
+    noise_std = (signal_std / snr) if snr != 0 else 0.0
 
     return noise_std

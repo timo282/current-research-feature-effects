@@ -104,7 +104,7 @@ def simulate(
 
                     if models[model_str]["model_params"] == "to_tune":
                         tuning_studies_dir = config.get("storage", "tuning_studies_folder")
-                        os.makedirs(Path(os.getcwd()) / tuning_studies_dir, exist_ok=True)
+                        os.makedirs(Path(os.getcwd()) / str(groundtruth) / tuning_studies_dir, exist_ok=True)
                         study_name = f"{model_str}_{n_train}_{int(snr)}"
                         storage_name = f"sqlite:///{str(groundtruth)}/{tuning_studies_dir}/{model_str}.db"
                         try:
@@ -113,13 +113,13 @@ def simulate(
                                 storage=storage_name,
                             ).best_params
                         except KeyError as e:
-                            if str(e) == "Record does not exist.":
+                            if str(e) == "'Record does not exist.'":
                                 X_tuning_train, y_tuning_train, X_tuning_val, y_tuning_val = generate_data(
                                     groundtruth=groundtruth,
                                     n_train=n_train,
-                                    n_test=config.get("simulation_metadata", "n_tuning_val"),
+                                    n_test=config.getint("simulation_metadata", "n_tuning_val"),
                                     snr=snr,
-                                    seed=config.get("simulation_metadata", "tuning_data_seed"),
+                                    seed=config.getint("simulation_metadata", "tuning_data_seed"),
                                 )
                                 model_params = optimize(
                                     model=model,
@@ -127,7 +127,7 @@ def simulate(
                                     y_train=y_tuning_train,
                                     X_val=X_tuning_val,
                                     y_val=y_tuning_val,
-                                    n_trials=config.get("simulation_metadata", "n_tuning_trials"),
+                                    n_trials=config.getint("simulation_metadata", "n_tuning_trials"),
                                     metric=config.get("simulation_metadata", "tuning_metric"),
                                     direction=config.get("simulation_metadata", "tuning_direction"),
                                     study_name=study_name,
