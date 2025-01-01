@@ -105,7 +105,7 @@ def _suggest_hps_svm(trial: optuna.trial.Trial):
 
 def _suggest_hps_gam(trial: optuna.trial.Trial):
     hyperparams = {
-        "n_splines": trial.suggest_int("n_splines", 5, 50),
+        "n_bases": trial.suggest_int("n_bases", 5, 50),
         "lam": trial.suggest_float("lam", 1e-3, 1e3, log=True),
     }
 
@@ -114,44 +114,56 @@ def _suggest_hps_gam(trial: optuna.trial.Trial):
 
 class GAM(BaseEstimator, RegressorMixin):
     """
-    GAM compatible with sklearn API that automatically creates spline terms
-    and their interactions up to a specified order.
+     GAM compatible with sklearn API that automatically creates spline terms
+     and their interactions up to a specified order.
 
-    Parameters
-    ----------
-    interaction_order : int, default=1
-        Maximum order of feature interactions to include.
-        1 means no interactions (only main effects)
-        2 means pairwise interactions
-        3 means up to three-way interactions, etc.
-    n_splines : int, default=25
-        Number of splines to use for smoothing terms
-    lam : float, default=0.6
-        Smoothing parameter
+     Parameters
+     ----------
+     interaction_order : int, default=1
+         Maximum order of feature interactions to include.
+         1 means no interactions (only main effects)
+         2 means pairwise interactions
+         3 means up to three-way interactions, etc.
+    n_bases : int, default=25
+        Total number of basis functions to target for each term.
+        For k-way interactions, uses n_bases^(1/k) splines per feature.
+     lam : float, default=0.6
+         Smoothing parameter.
 
-    Example
-    -------
-    ```
-    # Create GAM with all pairwise interactions
-    gam = GAM(interaction_order=2)
-    gam.fit(X_train, y_train)
-    gam.predict(X_test)
-    ```
+     Example
+     -------
+     ```
+     # Create GAM with all pairwise interactions
+     gam = GAM(interaction_order=2)
+     gam.fit(X_train, y_train)
+     gam.predict(X_test)
+     ```
     """
 
     def __init__(
         self,
         interaction_order: int = 1,
-        n_splines: int = 25,
+        n_bases: int = 25,
         lam: float = 0.6,
     ):
         if interaction_order < 1:
             raise ValueError("interaction_order must be >= 1")
+        if n_bases < 4:
+            raise ValueError("n_bases must be >= 4")
 
         self.interaction_order = interaction_order
-        self.n_splines = n_splines
+        self.n_bases = n_bases
         self.lam = lam
         self._is_fitted__ = False
+
+    def _get_n_splines(self, order: int) -> int:
+        """
+        Calculate number of splines per feature for a given interaction order.
+
+        Uses the order-th root of n_bases to maintain consistent total basis
+        functions across different interaction orders.
+        """
+        return max(4, round(self.n_bases ** (1 / order)))
 
     def _generate_terms(self, n_features: int):
         """Generate spline terms for all features and their interactions."""
@@ -159,15 +171,17 @@ class GAM(BaseEstimator, RegressorMixin):
         gam_term = None
 
         # Add main effects (spline terms for each feature)
+        n_splines_main = self._get_n_splines(1)
         for feature in features:
-            term = s(feature, n_splines=self.n_splines, lam=self.lam)
+            term = s(feature, n_splines=n_splines_main, lam=self.lam)
             gam_term = term if gam_term is None else gam_term + term
 
         # Add interaction terms if interaction_order > 1
         if self.interaction_order > 1:
             for order in range(2, min(self.interaction_order + 1, n_features + 1)):
+                n_splines_interaction = self._get_n_splines(order)
                 for features_subset in combinations(features, order):
-                    term = te(*features_subset, n_splines=self.n_splines, lam=self.lam)
+                    term = te(*features_subset, n_splines=n_splines_interaction, lam=self.lam)
                     gam_term = term if gam_term is None else gam_term + term
 
         return gam_term

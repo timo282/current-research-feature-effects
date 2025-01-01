@@ -22,8 +22,8 @@ XGBoost_OT:
 GAM_OF:
   model: GAM
   model_params:
-    n_splines: 100
-    lam: 1e-6
+    n_bases: 50
+    lam: 0.000001
 
 GAM_OT:
   model: GAM

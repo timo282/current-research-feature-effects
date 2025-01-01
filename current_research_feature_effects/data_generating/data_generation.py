@@ -255,7 +255,9 @@ def _generate_samples(
     X = generator.normal(0, 1, size=(n_samples, groundtruth.n_features))
 
     # Apply the correlation matrix using Cholesky decomposition
-    if groundtruth.correlation_matrix is not None:
+    if groundtruth.correlation_matrix is not None and not np.array_equal(
+        groundtruth.correlation_matrix, np.eye(groundtruth.n_features)
+    ):
         L = np.linalg.cholesky(groundtruth.correlation_matrix)
         X = X @ L.T
 

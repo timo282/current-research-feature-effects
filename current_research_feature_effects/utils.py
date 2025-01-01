@@ -50,7 +50,7 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
         map_dataset_to_groundtruth(
             config["groundtruth"],
             [(v["marginal"]["type"], tuple(v["marginal"]["params"])) for v in config["features"].values()],
-            np.array(config["correlation_matrix"]),
+            np.array(config["correlation_matrix"], dtype=float),
             feature_names=list(config["features"].keys()),
             name=name,
         )
