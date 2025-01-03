@@ -127,8 +127,10 @@ class GAM(BaseEstimator, RegressorMixin):
     n_bases : int, default=25
         Total number of basis functions to target for each term.
         For k-way interactions, uses n_bases^(1/k) splines per feature.
-     lam : float, default=0.6
-         Smoothing parameter.
+    lam : float, default=0.6
+        Smoothing parameter.
+    max_iter : int, default=250
+        Maximum number of iterations for the solver.
 
      Example
      -------
@@ -145,6 +147,7 @@ class GAM(BaseEstimator, RegressorMixin):
         interaction_order: int = 1,
         n_bases: int = 25,
         lam: float = 0.6,
+        max_iter: int = 1000,
     ):
         if interaction_order < 1:
             raise ValueError("interaction_order must be >= 1")
@@ -154,6 +157,7 @@ class GAM(BaseEstimator, RegressorMixin):
         self.interaction_order = interaction_order
         self.n_bases = n_bases
         self.lam = lam
+        self.max_iter = max_iter
         self._is_fitted__ = False
 
     def _get_n_splines(self, order: int) -> int:
@@ -204,7 +208,7 @@ class GAM(BaseEstimator, RegressorMixin):
         """
         n_features = X.shape[1]
         terms = self._generate_terms(n_features)
-        self.model = LinearGAM(terms)
+        self.model = LinearGAM(terms, max_iter=self.max_iter)
         self.model.fit(X, y)
         self._is_fitted__ = True
 

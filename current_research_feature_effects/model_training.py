@@ -43,7 +43,7 @@ def optimize(
     metric: str,
     direction: Literal["maximize", "minimize"],
     study_name: str,
-    storage_name: Path
+    storage_name: Path,
 ) -> optuna.study.Study:
     optuna.logging.set_verbosity(optuna.logging.ERROR)
 
@@ -60,6 +60,6 @@ def optimize(
     def objective(trial: optuna.trial.Trial):
         return _objective(model, X_train, y_train, X_val, y_val, trial, metric)
 
-    study.optimize(objective, n_trials=n_trials)
+    study.optimize(objective, n_trials=n_trials, catch=(np.linalg.LinAlgError, RuntimeError))
 
     return study
