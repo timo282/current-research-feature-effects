@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 import math
-from typing_extensions import Literal, List, Tuple
+from typing_extensions import Literal, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,13 +17,15 @@ from current_research_feature_effects.plotting.utils import (
 from current_research_feature_effects.feature_effects import compute_pdps, compute_ales
 
 
-def boxplot_model_results(metric: Literal["mse", "mae", "r2"], df: pd.DataFrame) -> plt.Figure:
+def boxplot_model_results(
+    metric: Literal["mse", "mae", "r2"], df: pd.DataFrame, ylim: Optional[Tuple[float, float]] = None
+) -> plt.Figure:
     set_style()
     fig, ax = plt.subplots(1, 2, figsize=(12, 6), dpi=300, sharey=True)
     fig.suptitle("Model evaluation", fontsize=16, fontweight="bold")
     ax[0].set_title(f"{metric} on train set")
     sns.boxplot(
-        x="snr",
+        x="n_train",
         y=f"{metric}_train",
         hue="model",
         data=df,
@@ -31,8 +33,10 @@ def boxplot_model_results(metric: Literal["mse", "mae", "r2"], df: pd.DataFrame)
         **get_boxplot_style(),
     )
     ax[0].legend().set_visible(False)
+    if ylim is not None:
+        ax[0].set_ylim(ylim)
     sns.boxplot(
-        x="snr",
+        x="n_train",
         y=f"{metric}_test",
         hue="model",
         data=df,
@@ -263,11 +267,9 @@ def plot_correlation_analysis(
                     color=sns.color_palette("Set2", n_colors=len(models)).as_hex()[models.index(model)],
                     fontsize=9,
                 )
-                correlation_results.append(
-                    {"snr": snr, "feature": feature, "model": model, "correlation": model_corr}
-                )
+                correlation_results.append({"snr": snr, "feature": feature, "model": model, "correlation": model_corr})
 
-    g.set_titles(col_template=noise_name+": {col_name}", row_template="${row_name}$", fontweight=16)
+    g.set_titles(col_template=noise_name + ": {col_name}", row_template="${row_name}$", fontweight=16)
     g.set_axis_labels(f"Model Error ({model_error_metric})", f"{feature_effect} Error")
     g.add_legend(title="Estimator")
 
