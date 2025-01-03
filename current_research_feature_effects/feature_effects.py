@@ -1,7 +1,9 @@
 from typing_extensions import List, Dict, Callable, Tuple
+from copy import deepcopy
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator
+from sklearn.model_selection import KFold
 
 
 def _partial_dependence(estimator: BaseEstimator, X: np.ndarray, feature: int, grid: np.ndarray) -> Dict:
@@ -257,6 +259,84 @@ def compute_ales(
         )
 
     return ales
+
+
+def compute_cv_feature_effect(
+    model: BaseEstimator,
+    X: np.ndarray,
+    y: np.ndarray,
+    cv: KFold,
+    feature_names: List[str],
+    cv_grids: List[List[np.ndarray]],
+    effect_fn: Callable,
+    center_curves: bool = False,
+    remove_first_last: bool = False,
+) -> List[Dict]:
+    """
+    Compute feature effects using cross-validation.
+
+    For each fold, fits the model on training data and computes feature effects on validation data.
+    The effects across folds are then averaged. Grid points must be consistent across folds
+    for each feature.
+
+    Parameters
+    ----------
+    model : BaseEstimator
+        Model to compute feature effects for.
+    X : np.ndarray
+        Input data of shape (n_samples, n_features).
+    y : np.ndarray
+        Target values of shape (n_samples,).
+    cv : KFold
+        Cross-validation splitter.
+    feature_names : List[str]
+        Names of the features.
+    cv_grids : List[List[np.ndarray]]
+        Grid points for each feature for each fold.
+    effect_fn : Callable
+        Function to compute feature effects. Must take arguments:
+        (model, X, feature_names, grid_values, center_curves, remove_first_last)
+    center_curves : bool, default=False
+        Whether to center the effect curves around zero.
+    remove_first_last : bool, default=False
+        Whether to remove first and last grid points from effects.
+
+    Returns
+    -------
+    List[Dict]
+        List of dictionaries, one per feature, containing:
+        - 'feature': Feature name
+        - 'grid_values': Grid points for this feature
+        - 'effect': Averaged effect values across folds
+
+    Raises
+    ------
+    ValueError
+        If grid points are not consistent across folds for any feature.
+    """
+    effects = []
+    for (train_index, test_index), cv_grid in zip(cv.split(X=X, y=y), cv_grids):
+        X_train, X_val = X[train_index], X[test_index]
+        y_train, _ = y[train_index], y[test_index]
+        model_fold = deepcopy(model)
+        model_fold.fit(X_train, y_train)
+        effect_fold = effect_fn(model_fold, X_val, feature_names, cv_grid, center_curves, remove_first_last)
+        effects.append(effect_fold)
+
+    averaged_effects = []
+    for feature in feature_names:
+        grids = [item["grid_values"] for sublist in effects for item in sublist if item["feature"] == feature]
+        all_same = all(np.array_equal(grid, grids[0]) for grid in grids)
+
+        if not all_same:
+            raise ValueError(f"Grid values not consistent for feature {feature}")
+
+        effect_folds = [item["effect"] for sublist in effects for item in sublist if item["feature"] == feature]
+        averaged_effect = {"feature": feature, "grid_values": grids[0], "effect": np.mean(effect_folds, axis=0)}
+
+        averaged_effects.append(averaged_effect)
+
+    return averaged_effects
 
 
 def compare_effects(

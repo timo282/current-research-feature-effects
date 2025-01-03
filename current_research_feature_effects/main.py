@@ -9,6 +9,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from sklearn.base import BaseEstimator
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold
 import optuna
 
 from current_research_feature_effects.data_generating.data_generation import generate_data, Groundtruth
@@ -21,6 +22,7 @@ from current_research_feature_effects.utils import (
 from current_research_feature_effects.feature_effects import (
     compute_pdps,
     compute_ales,
+    compute_cv_feature_effect,
     compare_effects,
     get_modified_grids,
 )
@@ -76,8 +78,13 @@ def simulate(
                     seed=sim_no,
                 )
 
-                train_grid, val_grid, mc_grid = get_modified_grids(
-                    base_grids=base_grids, Xs=[X_train, X_val, X_mc], feature_names=feature_names
+                cv = KFold(n_splits=5, shuffle=True, random_state=42)
+                X_all, y_all = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
+                cv_splits = cv.split(X=X_all, y=y_all)
+                val_folds = [X_all[split[1]] for split in cv_splits]
+
+                train_grid, val_grid, mc_grid, *cv_grids = get_modified_grids(
+                    base_grids=base_grids, Xs=[X_train, X_val, X_mc] + val_folds, feature_names=feature_names
                 )
 
                 pdp_groundtruth = compute_pdps(
@@ -175,44 +182,20 @@ def simulate(
                         if_exists="append",
                     )
 
-                    # # calculate ales and compare to groundtruth
-                    # ale = compute_ales(model, X_train, feature_names, config)
-                    # ale_comparison = compare_effects(
-                    #     ale_groundtruth,
-                    #     ale,
-                    #     mean_squared_error,
-                    #     center_curves=config["errors"].getboolean("centered"),
-                    # )
-                    # df_ale_result = pd.concat(
-                    #     (
-                    #         pd.DataFrame(
-                    #             {
-                    #                 "model_id": [model_name],
-                    #                 "model": [model_str],
-                    #                 "simulation": [sim_no + 1],
-                    #                 "n_train": [n_train],
-                    #                 "snr": [snr],
-                    #             }
-                    #         ),
-                    #         ale_comparison,
-                    #     ),
-                    #     axis=1,
-                    # )
+                    # calculate pdps
+                    pdp_train = compute_pdps(
+                        model, X_train, feature_names, train_grid, center_curves, remove_first_last
+                    )
+                    pdp_val = compute_pdps(model, X_val, feature_names, val_grid, center_curves, remove_first_last)
+                    pdp_cv = compute_cv_feature_effect(
+                        model, X_all, y_all, cv, feature_names, cv_grids, compute_pdps, center_curves, remove_first_last
+                    )
 
-                    # # save ale results
-                    # df_ale_result.to_sql(
-                    #     "ale_results",
-                    #     con=engine_effects_results,
-                    #     if_exists="append",
-                    # )
-
-                    # # calculate and compare pdps to groundtruth
-                    # pdp = compute_pdps(model, X_train, feature_names, config)
+                    # # compute pdp feature effect metrics
                     # pdp_comparison = compare_effects(
                     #     pdp_groundtruth,
-                    #     pdp,
+                    #     pdp_train,
                     #     mean_squared_error,
-                    #     center_curves=config["errors"].getboolean("centered"),
                     # )
                     # df_pdp_result = pd.concat(
                     #     (
@@ -233,6 +216,44 @@ def simulate(
                     # # save pdp results
                     # df_pdp_result.to_sql(
                     #     "pdp_results",
+                    #     con=engine_effects_results,
+                    #     if_exists="append",
+                    # )
+
+                    # calculate ales
+                    ale_train = compute_ales(
+                        model, X_train, feature_names, train_grid, center_curves, remove_first_last
+                    )
+                    ale_val = compute_ales(model, X_val, feature_names, val_grid, center_curves, remove_first_last)
+                    ale_cv = compute_cv_feature_effect(
+                        model, X_all, y_all, cv, feature_names, cv_grids, compute_ales, center_curves, remove_first_last
+                    )
+
+                    # # compute ale feature effect metrics
+                    # ale_comparison = compare_effects(
+                    #     ale_groundtruth,
+                    #     ale_train,
+                    #     mean_squared_error,
+                    # )
+                    # df_ale_result = pd.concat(
+                    #     (
+                    #         pd.DataFrame(
+                    #             {
+                    #                 "model_id": [model_name],
+                    #                 "model": [model_str],
+                    #                 "simulation": [sim_no + 1],
+                    #                 "n_train": [n_train],
+                    #                 "snr": [snr],
+                    #             }
+                    #         ),
+                    #         ale_comparison,
+                    #     ),
+                    #     axis=1,
+                    # )
+
+                    # # save ale results
+                    # df_ale_result.to_sql(
+                    #     "ale_results",
                     #     con=engine_effects_results,
                     #     if_exists="append",
                     # )
