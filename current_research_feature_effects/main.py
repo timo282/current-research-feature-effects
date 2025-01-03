@@ -102,7 +102,7 @@ def simulate(
                     model_name = f"{model_str}_{sim_no+1}_{n_train}_{int(snr)}"
                     model: BaseEstimator = models[model_str]["model"]
 
-                    if models[model_str]["model_params"] == "to_tune":
+                    if models[model_str]["model_params"][str(groundtruth)][n_train] == "to_tune":
                         tuning_studies_dir = config.get("storage", "tuning_studies_folder")
                         os.makedirs(Path(os.getcwd()) / str(groundtruth) / tuning_studies_dir, exist_ok=True)
                         study_name = f"{model_str}_{n_train}_{int(snr)}"
@@ -136,7 +136,7 @@ def simulate(
                             else:
                                 raise
                     else:
-                        model_params = models[model_str]["model_params"]
+                        model_params = models[model_str]["model_params"][str(groundtruth)][n_train]
 
                     model.set_params(**model_params)
 
