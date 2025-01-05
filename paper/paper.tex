@@ -1,0 +1,358 @@
+\documentclass[runningheads]{llncs}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage[misc]{ifsym}
+\newcommand{\corr}{(\Letter)}
+% N.B.: do not change anything above this line. If you require additional packages, please load them directly after this line.
+\usepackage{mwe}
+% N.B.: you may delete the preceding line. It is used to display an example image in this template.
+
+\begin{document}
+
+\title{Should We Compute Feature Effects on Training or Validation Data?}
+
+% \titlerunning{Should We Compute Feature Effects on Training or Validation Data?}
+% If the full title of your paper is short enough to also fit in the running head, you can omit the abbreviated paper title here. You can check as follows: if you comment out the \titlerunning line, something will appear in the header of all odd-numbered pages of your PDF from page 3 onward. This something is either the full title (in which case all is well), or the error message "Title Suppressed Due to Excessive Length". If this error message appears, you're going to want to provide an abbreviated title within the \titlerunning command, because if you won't do it, Springer will do it for you.
+
+%N.B.: Author information (both in the \author{} and \authorrunning{} command) should only be present in the Camera-Ready Version of your paper. The version that you initially submit for review, ought to be double-blind. So, when initially submitting your paper, use:
+%\author{Author information scrubbed for double-blind reviewing}
+\author{Timo Heiß\inst{1}}
+% You may leave out the orcidID information, if you want to.
+% Use \corr to indicate the corresponding author. Note the spacing around the \corr command. Only one author can be the corresponding author.
+
+%N.B.: comment out the \authorrunning{} command for the double-blind version of your paper submitted for review. Later, if your paper is accepted, use the command for the Camera-Ready Version.
+\authorrunning{Timo Heiß}
+% First names are abbreviated in the running head.
+% If there is one author, write 'A.L. Benjamin'.
+% If there are two authors, write 'A.L. Benjamin and C.C. Broadus Jr.'
+% If there are more than two authors, '[...] et al.' is used.
+
+\institute{Department of Statistics, LMU Munich, Ludwigstr. 33, 80539 Munich, Germany \email{t.heiss@campus.lmu.de}}
+
+\maketitle              % typeset the header of the contribution
+
+\begin{abstract}
+    The abstract should briefly summarize the contents of the paper in
+    150--250 words.
+
+    \keywords{Explainable AI  \and Feature effects \and Partial dependence plot \and Accumulated local effects}
+\end{abstract}
+
+\section{Introduction}
+Most Machine Learning (ML) models can be considered black boxes --- opaque
+systems that intrinsically do not allow insight into their internal reasoning,
+making it often impossible to explain their decisions. However, this can be
+problematic in many domains and applications, such as the healthcare, legal, or
+finance sectors, where decisions must be transparent and
+accountable~\cite{adadi_peeking_2018}.
+
+Interpretability is crucial to enhance
+trust~\cite{ribeiro_why_2016,teach_analysis_1981}, address potential
+biases~\cite{guidotti_survey_2019}, fairness and ethical concerns
+~\cite{lipton_mythos_2018}, and ensure compliance with regulations such as the
+EU's General Data Protection Regulation (GDPR)~\cite{gdpr2016} and AI
+Act~\cite{euaia2024}. To address these challenges, the field of Explainable AI
+/ Interpretable ML has emerged~\cite{adadi_peeking_2018}. Although there are
+many different methods\footnote{For an overview of Explainable AI methods, see
+    e.g.~\cite{adadi_peeking_2018,kamath_introduction_2021,molnar_interpretable_2022}.},
+we will focus on feature effect methods like \textit{Partial Dependence Plots
+    (PDP)}~\cite{friedman_greedy_2001} and \textit{Accumulated Local Effects
+    (ALE)}~\cite{apley_visualizing_2020}.
+
+Due to the severity of many applications, it is crucial to utilize these
+explainability methods correctly. In general, there are many pitfalls to be
+aware of~\cite{molnar_general_2022}, including whether to compute explanations
+in-sample, i.e.\ on training data, or out-of-sample, which we refer to as
+validation data in the following. In loss-based methods such as
+\textit{Permutation Feature Importance (PFI)
+}\cite{breiman_random_2001,fisher_all_2019}, this choice is crucial and has
+already been studied (e.g., in~\cite{molnar_general_2022}). Nevertheless, other
+explainability methods, such as the \textit{Mean Decrease in Impurity (MDI)}
+(or \textit{Gini Importance}) of Random Forests, or \textit{SHAP}
+values~\cite{loecher_debiasing_2022,loecher_debiasing_2024}, have also been
+found to exhibit biases when computed on training data.
+
+However, to the best of our knowledge, there exist no similar studies for
+feature effect methods like PDP and ALE. Existing works, including the original
+papers of PDP and ALE, rely on training data without further justification
+(e.g.,~\cite{apley_visualizing_2020,friedman_greedy_2001,molnar_interpretable_2022}).
+In contrast, practitioners often advocate for using unseen test/validation
+data\footnote{see, e.g.\ \url{https://github.com/SauceCat/PDPbox/issues/68}
+    (10/27/2024)}, or base their choice on practical constraints like dataset
+size\footnote{see, e.g.
+    \url{https://forums.fast.ai/t/partial-dependence-plot/98465} (10/27/2024)}.
+While the training set is usually larger and might thus lead to less variance
+in the feature effect estimates, a too large dataset can increase computation
+times substantially, particularly for the PDP~\cite{friedman_greedy_2001}. On
+the other hand, although feature effects are not based on generalization error
+like PFI, it is not clear how much they are affected by overfitting or
+distribution shifts between training and validation data.
+
+In this paper, we aim to answer this largely unaddressed, fundamental
+methodological question of whether to use training or validation data to
+compute feature effects. We perform an empirical simulation study, comparing
+feature effect error and uncertainty for PDP and ALE across training data,
+validation data, and cross-validation scenarios, considering various data
+scenarios and model types. Our main contributions in this paper are as follows.
+\begin{enumerate}
+    \item We shed light on the question of whether to compute feature effects on training
+          data, validation data, or in a cross-validated manner, grounded through our
+          comprehensive simulation study, considering feature effect error, bias, and
+          variance across different models and data scenarios.
+    \item We define methods to quantify feature effect error and uncertainty in a
+          theoretical framework, building upon previous work in this area.
+    \item We provide an overview of commonly used test functions for simulation studies
+          in Interpretable ML, including applications and purposes.
+\end{enumerate}
+
+These contributions have several important implications: Our empirically
+grounded recommendations enable practitioners and researchers to make informed
+decisions about which dataset to select for feature effect computation, helping
+to understand potential implications of their choices. Additionally, our
+framework for evaluating feature effects and our systematic collection of test
+functions provide a foundation for future research in Interpretable ML, with
+the latter specifically facilitating test function choice for simulation
+studies.
+
+The remainder of this paper is structured as follows. In
+\textsc{Section~\ref{sec:related-works}}, we introduce the considered feature
+effect methods PDP and ALE, as well as related works on feature effect error
+and uncertainty, and give an overview of common test functions for simulation
+studies. In \textsc{Section~\ref{sec:quantify-fe-u}}, we extend existing works
+and give our definitions of feature effect errors and uncertainty. We then
+describe the methodology and set-up of our simulation studies in
+\textsc{Section~\ref{sec:methodology-set-up}}, present the results in
+\textsc{Section~\ref{sec:results}}, and discuss their implications and
+limitations in \textsc{Section~\ref{sec:discussion}}. In
+\textsc{Section~\ref{sec:conclusion}}, we briefly conclude our work.
+
+\section{Background \& Related Work}\label{sec:related-works}
+
+\subsection{Feature Effects}
+
+The \textit{Partial Dependence Plot (PDP)} by
+Friedman~\cite{friedman_greedy_2001} describes the marginal effect of one or
+two features on the prediction of a model $\hat f$. For a feature set $X_S$
+(with $S \subseteq \{1,\ldots,p\}$, $|S| = 1$ or $|S| = 2$), the PDP is defined
+as
+
+\begin{equation}
+    PDP_{\hat f, S} = \mathbb{E}_{X_C}[\hat{f}(x_S, X_C)] = \int f(x_S, x_C)d\mathbb{P}(x_C),
+\end{equation}
+
+\noindent where $X_C$ is the complement feature subset. $PDP_{\hat f, S}$ is a
+function of $x_S$ and can be estimated by Monte Carlo integration:
+
+\begin{equation}\label{eq:pdp-estimate}
+    \widehat{PDP}_{\hat f, S}(x_S) = \frac{1}{n} \sum_{i=1}^{n} \hat{f}(x_S, x_C^{(i)}).
+\end{equation}
+
+\noindent Here, $x_C^{(i)}$ are the actual complement feature values from the dataset of $n$ instances.
+To plot this function, a grid of $G$ grid points
+$\{(x_S^{(g)}, \widehat{PD}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.
+Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.
+
+The PDP assumes that the features in $S$ are independent of the features in
+$C$. If this is violated, the perturbations may produce unrealistic data points
+outside the underlying joint distribution of the data. This extrapolation issue
+can cause misleading
+interpretations~\cite{molnar_interpretable_2022,molnar_general_2022}.\\
+
+\noindent The \textit{Accumulated Local Effects (ALE)} plot is an alternative to the PDP that
+solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation above,
+for $|S|=1$, the ALE plot is defined as
+
+\begin{eqnarray}
+    ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} E_{X_C|X_S}
+    \left[\hat{f}^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant} \\
+    &=& \int_{x_{\text{min},s}}^{x_S} \int_{x_C}
+    \hat{f}^S(z_S, x_C)\mathbb{P}(x_C|z_S)dx_{C}dz_{S} - \text{constant},
+\end{eqnarray}
+
+\noindent where $\hat{f}^S(x_S, x_C) = \frac{\partial \hat{f}(x_S, x_C)}{\partial x_S}$.
+The constant is chosen so that $\widehat{ALE}_{\hat f,S}(X_S)$ is centered with a mean of $0$
+w.r.t.\ the marginal distribution of $X_S$. The uncentered ALE can be estimated by
+
+\begin{equation}\label{eq:ale-estimate-uncentered}
+    \widehat{\widetilde{ALE}}_{\hat f, S}(x) =
+    \sum_{k=1}^{k_S(x)} \frac{1}{n_S(k)} \sum_{i:x_S^{(i)} \in N_S(k)}
+    \left[\hat f(z_{k,S}, x_{C}^{(i)}) - \hat f(z_{k-1,S}, x_{C}^{(i)})\right].
+\end{equation}
+
+\noindent Here, $\{N_S(k) = (z_{k-1,S}, z_{k,S}]\}_{k=1}^{K}$ partitions the samples
+$\{x^{(i)}_S\}_{i=1}^n$ into $K$ intervals or neighborhoods $N_S(k)$. $n_S(k)$ denotes
+the number of observations in the $k$th interval $N_S(k)$, $k_S(x)$ represents the index
+of the interval to which a particular value $x$ of feature $x_S$ belongs.
+The uncentered ALE is centered by
+
+\begin{equation}\label{eq:ale-estimate-centered}
+    \widehat{ALE}_{\hat f, S}(x) =
+    \widehat{\widetilde{ALE}}_{\hat f, S}(x)
+    - \frac{1}{n} \sum_{i=1}^n \widehat{\widetilde{ALE}}_{\hat f, S}(x_S^{(i)})
+\end{equation}
+
+\noindent to have a mean effect of $0$. For the grid that defines the intervals,
+the quantiles of the empirical distribution of $\{x^{(i)}_S\}_{i=1}^n$ can be
+used~\cite{apley_visualizing_2020}.\\
+
+\noindent Other feature effect methods include the \textit{M-Plot (Marginal Plot)},
+which, however, suffers from the omitted variable
+bias~\cite{apley_visualizing_2020,friedman_greedy_2001},
+or \textit{functional ANOVA (fANOVA)}, which decomposes feature effects
+into main and interaction effects~\cite{hooker_discovering_2004}.
+
+Furthermore, methods exist that extend previous ones, such as \textit{Robust
+    and Heterogeneity-aware ALE (RHALE)}~\cite{gkolemis_rhale_2023}, or
+\textit{Accumulated Total Derivative Effect (ATDEV)} plots, which can be
+decomposed into ALE and \textit{Accumulated Cross Effects
+    (ACE)}~\cite{liu_model_2018}.
+
+In addition to these global feature effect methods, there are regional effect
+plots such as \textit{REPID}~\cite{herbinger_repid_2022}, as well as local
+methods, including \textit{ICE (Individual Conditional Expectation)}
+curves~\cite{goldstein_peeking_2015} or SHAP dependence plots
+(e.g.,~\cite{molnar_interpretable_2022}) based on SHAP
+values~\cite{lundberg_unified_2017}.
+
+For the remainder of this paper, we will focus on PDP and ALE as the most
+popular global feature effect methods and refer to them when speaking of
+feature effects.
+
+\subsection{Feature Effect Error Decomposition}
+
+To quantify the error of a computed feature effect, a ``ground truth'' needs to
+be defined first. We follow the approach of Molnar et
+al.~\cite{molnar_relating_2023} and define ground truth versions of PDP and ALE
+directly on the data generating process (DGP) by applying PDP and ALE to the
+underlying ground truth function $f$ (instead of model $\hat f$).
+
+For PDP, we can directly use the definition of Molnar et
+al.~\cite{molnar_relating_2023}:
+
+\begin{definition}[Definition 1 from~\cite{molnar_relating_2023}]
+    The PDP ground truth is the PDP applied to function
+    $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$
+    of the data generating process.
+
+    \begin{equation}
+        PDP_{f,S}(x_S) = \mathbb{E}_{X_C}[f(x_S,X_C)]
+    \end{equation}
+\end{definition}
+
+As stated by Molnar et al.~\cite{molnar_relating_2023}, their results also
+apply to conditional variants of the PDP such as ALE. We now make this
+definition explicit:
+
+\begin{definition}
+    The ALE ground truth is the ALE applied to function $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$ of the data generating process.
+
+    \begin{equation}
+        ALE_{f,S}(x_S) = \int_{x_{\text{min},s}}^{x_S} E_{X_C|X_S} \left[f^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant}
+    \end{equation}
+
+    \noindent where $f^S(x_S, x_C) = \frac{\partial f(x_S, x_C)}{\partial x_S}$ and \text{constant} chosen such that the effect has a mean of $0$ w.r.t. the marginal distribution of $X_S$.
+\end{definition}
+
+%With these definitions, $\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$
+%can now be treated as statistical estimators of the ground truth feature effects
+%(cf.~\cite{molnar_relating_2023}). 
+Note that different ground truth effects may also be defined, and our choices
+come with certain implications and limitations, such as omitting the
+\textit{aggregation bias}\footnote{for details,
+    see~\cite{herbinger_repid_2022}}~\cite{mehrabi_survey_2021}.
+
+With more complex ground truth functions $f$, it may become increasingly
+difficult to derive the ground truth feature effects analytically, especially
+for ALE. In these cases, we therefore propose to also estimate those effects by
+Monte Carlo integration, yielding $\widehat{PDP}_{f,S}(x_S)$ and
+$\widehat{ALE}_{f,S}(x_S)$ (obtained by plugging in $f$ instead of $\hat f$
+into the estimators in equations (\ref{eq:pdp-estimate}) and
+(\ref{eq:ale-estimate-uncentered}) / (\ref{eq:ale-estimate-centered})).\\
+
+\noindent Summarizing, we have now defined four quantities per feature effect:
+$PDP_{f,S}$ $\widehat{PDP}_{f,S}$, $PDP_{\hat f,S}$, and $\widehat{PDP}_{\hat f,S}$
+(analogue for ALE). We can now define different errors between each of these
+quantities. In this paper, we focus on the MSE, as it can be decomposed into
+bias and variance (see e.g.~\cite{geman_neural_1992}).
+Taking, for example, $PDP_{f,S}$ as ground truth, we can define the MSE of
+$PDP_{\hat f,S}$ at a point $x_S$ as follows~\cite{molnar_relating_2023}:
+
+\begin{align}
+    \text{MSE}(x_S; PDP_{f,S}, PDP_{\hat f,S})
+    &= \mathbb{E}_F[{(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f,S}(x_S))}^2]\\
+    &= \underbrace{{(PDP_f(x) - \mathbb{E}_F[PDP_{\hat{f}}(x)])}^2}_{Bias^2} + \underbrace{\text{Var}_F[PDP_{\hat{f}}(x)]}_{Variance}
+\end{align}
+
+\noindent Here $F$ denotes the distribution of trained models.
+
+% estimation of PDP / ALE + additional MC error
+
+
+$\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
+multiple models of the same inducer fitted to $M$ different training data
+sets sampled independently from the DGP. In the simulation scenario, this yields:
+
+\begin{align}
+    \widehat{\text{MSE}}(x_S; PDP_{f,S}, PDP_{\hat f,S}) &= \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
+\end{align}
+
+% also for bias and variance (including m-1)
+
+% estimation of MC error
+
+% aggregation over x
+
+
+
+
+\section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
+
+\section{Results}\label{sec:results}
+
+\section{Discussion}\label{sec:discussion}
+
+\section{Conclusion}\label{sec:conclusion}
+
+% (see Fig.\@ \ref{fig1})
+
+% \begin{figure}[t]
+% \includegraphics[width=\textwidth]{example-image-duck}
+% \caption{A figure caption is always placed below the illustration.
+% Please note that short captions are centered, while long ones are
+% justified by the macro package automatically.} \label{fig1}
+% \end{figure}
+
+% \begin{table}[t]
+% \caption{Table captions should be placed above the
+% tables.}\label{tab1}
+% \begin{tabular}{lll}
+% \toprule
+% Heading level &  Example & Font size and style\\
+% \midrule
+% Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
+% 1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
+% 2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
+% 3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
+% 4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+\begin{credits}
+    \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is used for
+    general acknowledgments, for example: This study was funded by X (grant number
+    Y).
+
+    \subsubsection{\discintname}
+    The authors have no competing interests to declare that are relevant to the
+    content of this article.
+\end{credits}
+
+%
+% ---- Bibliography ----
+\bibliographystyle{splncs04}
+\bibliography{paper/mybibliography}
+\end{document}
