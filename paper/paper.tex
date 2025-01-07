@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{booktabs}
+\usepackage{svg}
 \usepackage[misc]{ifsym}
 \newcommand{\corr}{(\Letter)}
 % N.B.: do not change anything above this line. If you require additional packages, please load them directly after this line.
@@ -280,33 +281,100 @@ bias and variance (see e.g.~\cite{geman_neural_1992}).
 Taking, for example, $PDP_{f,S}$ as ground truth, we can define the MSE of
 $PDP_{\hat f,S}$ at a point $x_S$ as follows~\cite{molnar_relating_2023}:
 
-\begin{align}
+\begin{equation}
     \text{MSE}(x_S; PDP_{f,S}, PDP_{\hat f,S})
-    &= \mathbb{E}_F[{(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f,S}(x_S))}^2]\\
-    &= \underbrace{{(PDP_f(x) - \mathbb{E}_F[PDP_{\hat{f}}(x)])}^2}_{Bias^2} + \underbrace{\text{Var}_F[PDP_{\hat{f}}(x)]}_{Variance}
-\end{align}
+    = \mathbb{E}_F[{(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f,S}(x_S))}^2]
+\end{equation}
+\begin{equation}
+    = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f},S}(x_S)])}^2}_{Bias^2} + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance}
+\end{equation}
 
-\noindent Here $F$ denotes the distribution of trained models.
+\noindent Here, $F$ denotes the distribution of trained models. The bias
+is linked to the bias of the model, the variance comes from the variance
+in the model fits (randomness in training data, randomness in model training procedure).
 
-% estimation of PDP / ALE + additional MC error
+Since we usually cannot determine $PDP_{\hat f,S}$, we need to estimate it by
+Monte Carlo integration, yielding $\widehat{PDP}_{\hat f,S}(x_S)$. This,
+however, introduces an additional variance term (we use the random variable
+$X_{mc}$ for the Monte Carlo samples (e.g., training or validation data)):
 
+\begin{equation}
+    \begin{split}
+        \text{MSE}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S})
+        = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f}, S}(x_S)])}^2}_{Bias^2} \\
+        + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance} + \underbrace{\mathbb{E}_F\text{Var}_{X_{mc}}[\widehat{PDP}_{\hat{f},S}(x_S)]}_{MC-Variance}
+    \end{split}
+\end{equation}
 
-$\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
+\begin{proof}
+    For better readability, we will omit the subscript $S$ as well as the point $x_S$ and use $X=X_{mc}$ in this proof:
+
+    \begin{align*}
+        \text{MSE}(PDP_{f}, \widehat{PDP}_{\hat f})
+         & = \mathbb{E}_F\mathbb{E}_X[(PDP_f - \widehat{PDP}_{\hat f})^2]                                                                                         \\
+         & = \mathbb{E}_F \mathbb{E}_X[PDP_f^2 - 2PDP_f\widehat{PDP}_{\hat f} + \widehat{PDP}_{\hat f}^2]                                                         \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_{\hat f}^2]                                                      \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}] + \mathbb{E}_F[\mathbb{E}_X[\widehat{PDP}_{\hat f}]^2] \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}] + \text{Var}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}])   \\
+         & \quad + \mathbb{E}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}])^2                                                                                           \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] +  Var_F[PDP_{\hat f}] + \mathbb{E}_F[PDP_{\hat f}]^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]  \\
+         & = (PDP_f - \mathbb{E}_F[PDP_{\hat f}])^2 + \text{Var}_F[PDP_{\hat f}] + \mathbb{E}_F[\text{Var}_X(\widehat{PDP}_{\hat f})]
+    \end{align*}
+
+    \noindent At multiple points, we use the fact that $\mathbb{E}_X[\widehat{PDP}_{\hat f}]
+        = PDP_{\hat f}$ (cf.~\cite{molnar_relating_2023}).
+\end{proof}
+
+\noindent We see that the variance due to MC integration also depends on the model
+distribution $F$. Similarly, one could use the estimate $\widehat{PDP}_{f,S}$
+as groundtruth, introducing an additional variance term $Var_{X_{mc2}}$when
+estimated on different MC sample (proof in
+\textsc{Appendix~\ref{app:proof-mc-variance}}).
+An overview of all error terms in this chian can be found in
+\textbf{Fig.\@~\ref{fig:error-graph}}.\\
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{img/error_graph.pdf}
+    \caption{Error chain in feature effect estimation
+        (modified, original version can be found in~\cite{molnar_relating_2023})}\label{fig:error-graph}
+\end{figure}
+
+\noindent $\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
 multiple models of the same inducer fitted to $M$ different training data
-sets sampled independently from the DGP. In the simulation scenario, this yields:
+sets sampled independently from the DGP. We propose the following estimators:
+\begin{equation}
+    \widehat{\text{MSE}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
+\end{equation}
+\begin{equation}
+    \widehat{\text{Bias}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = (PDP_{f,S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat{f}^{(m)},S}(x_S))
+\end{equation}
+\begin{equation}
+    \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) =
+    \frac{1}{M-1}\sum_{m=1}^M\left(\widehat{PDP}_{\hat f^{(m)},S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat f^{(m)},S}(x_S)\right)^2
+\end{equation}
 
-\begin{align}
-    \widehat{\text{MSE}}(x_S; PDP_{f,S}, PDP_{\hat f,S}) &= \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
-\end{align}
+\noindent Note that these are similar to the approach in~\cite{molnar_relating_2023},
+but we do not specify which data points to use for MC integration. The
+variance captures both the variance in the model fits and the variance due to
+MC integration. To estimate the MC variance, we propose the following estimators:
+\begin{equation}
+    \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))^2
+\end{equation}
 
-% also for bias and variance (including m-1)
+and
+\begin{equation}
+    \begin{split}
+        \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
+        \left(\widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S) - \frac{1}{K}\sum_{k=1}^K \widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S)\right)^2
+    \end{split}
+\end{equation}
 
-% estimation of MC error
+\noindent For more convenient analysis of the errors, one could also
+aggregate them over the marginal distribution of $X_S$ (e.g.,
+estimated by averaging over the grid points if chosen appropriately)
+to obtain a single error measure per feature effect.
 
-% aggregation over x
-
-
-
+\section{Overview of Test Functions}\label{sec:test-functions}
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
@@ -355,4 +423,25 @@ sets sampled independently from the DGP. In the simulation scenario, this yields
 % ---- Bibliography ----
 \bibliographystyle{splncs04}
 \bibliography{paper/mybibliography}
+
+% appendix
+\newpage
+\appendix
+\section{Proof: Monte Carlo Variance for Groundtruth}\label{app:proof-mc-variance}
+\begin{proof}
+    For better readability, we will omit the subscript $S$ as well as the point $x_S$ and use $X=X_{mc}$ in this proof:
+
+    \begin{align*}
+        \mathbb{E}_F\mathbb{E}_X[(PDP_f - \widehat{PDP}_f)^2] & = \mathbb{E}_F\mathbb{E}_X[PDP_f^2 - 2PDP_f \widehat{PDP}_f + \widehat{PDP}_f^2]                                 \\
+                                                              & = PDP_f^2 - 2PDP_f \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f^2]       \\
+                                                              & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + \mathbb{E}_F[\mathbb{E}_X[\widehat{PDP}_f]^2] \\
+                                                              & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + PDP_f^2                                       \\
+                                                              & = \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f]                                                                      \\
+                                                              & = \text{Var}_X[\widehat{PDP}_f]
+    \end{align*}
+
+    \noindent Again we use $\mathbb{E}_X[\widehat{PDP}_{f}] = PDP_{f}$ (cf.~\cite{molnar_relating_2023}) as well as the fact
+    that all quantities based on $f$ do not depend on the model distribution $F$.
+\end{proof}
+
 \end{document}
