@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from pathlib import Path
+import warnings
 import os
 from typing_extensions import List, Dict, Tuple
 from multiprocessing import Pool, cpu_count
@@ -147,17 +148,25 @@ def simulate(
 
                     model.set_params(**model_params)
 
-                    model.fit(X_train, y_train)
+                    try:
+                        # train model
+                        model.fit(X_train, y_train)
 
-                    # save model
-                    os.makedirs(Path(str(groundtruth)) / config.get("storage", "models"), exist_ok=True)
-                    dump(
-                        model,
-                        Path(os.getcwd()) / str(groundtruth) / config.get("storage", "models") / f"{model_name}.joblib",
-                    )
+                        # save model
+                        os.makedirs(Path(str(groundtruth)) / config.get("storage", "models"), exist_ok=True)
+                        dump(
+                            model,
+                            Path(os.getcwd()) / str(groundtruth) / config.get("storage", "models") / f"{model_name}.joblib",
+                        )
 
-                    # evaluate model
-                    model_results = eval_model(model, X_train, y_train, X_test, y_test)
+                        # evaluate model
+                        model_results = eval_model(model, X_train, y_train, X_test, y_test)
+                    except Exception as e:
+                        model_results = (np.nan,)*6
+                        warnings.warn(
+                            f"Training of model {model_name} failed with error:\n{e}"
+                        )
+
                     df_model_result = pd.DataFrame(
                         {
                             "model_id": [model_name],
