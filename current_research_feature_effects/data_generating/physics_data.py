@@ -1,4 +1,4 @@
-from typing import Literal, Callable
+from typing import Callable
 import numpy as np
 import pandas as pd
 from scipy import constants
@@ -37,10 +37,13 @@ class NewtonUniversalGravitationGroundtruth(Groundtruth):
             / ((X[:, 2] - X[:, 3]) ** 2 + (X[:, 4] - X[:, 5]) ** 2 + (X[:, 6] - X[:, 7]) ** 2)
         )
 
-    def get_theoretical_partial_dependence(
-        self, feature: Literal["m_1", "m_2", "x_1", "x_2", "y_1", "y_2", "z_1", "z_2"]
-    ) -> Callable:
+    def get_theoretical_partial_dependence(self, feature: str) -> Callable:
         raise NotImplementedError("Theoretical partial dependence not implemented for NewtonUniversalGravitation.")
+
+    def get_theoretical_accumulated_local_effects(self, feature: str) -> Callable:
+        raise NotImplementedError(
+            "Theoretical accumulated local effects not implemented for NewtonUniversalGravitation."
+        )
 
 
 class WaveInterferenceGroundtruth(Groundtruth):
@@ -73,5 +76,8 @@ class WaveInterferenceGroundtruth(Groundtruth):
 
         return np.sqrt(x1**2 + x2**2 + 2 * x1 * x2 * np.cos(theta1 - theta2))
 
-    def get_theoretical_partial_dependence(self, feature: Literal["x_1", "x_2", "theta_1", "theta_2"]) -> Callable:
+    def get_theoretical_partial_dependence(self, feature: str) -> Callable:
         raise NotImplementedError("Theoretical partial dependence not implemented for WaveInterference.")
+
+    def get_theoretical_accumulated_local_effects(self, feature: str) -> Callable:
+        raise NotImplementedError("Theoretical accumulated local effects not implemented for WaveInterference.")

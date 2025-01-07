@@ -1,4 +1,4 @@
-from typing import Literal, Callable
+from typing import Callable
 import pandas as pd
 import numpy as np
 from scipy.integrate import quad
@@ -36,7 +36,7 @@ class Friedman1Groundtruth(Groundtruth):
 
         return 10 * np.sin(np.pi * X[:, 0] * X[:, 1]) + 20 * (X[:, 2] - 0.5) ** 2 + 10 * X[:, 3] + 5 * X[:, 4]
 
-    def get_theoretical_partial_dependence(self, feature: Literal["x_1", "x_2", "x_3", "x_4", "x_5"]) -> Callable:
+    def get_theoretical_partial_dependence(self, feature: str) -> Callable:
         """Get the theoretical partial dependence function for a feature.
         Only uniform feature distribution is supported.
 
@@ -89,3 +89,19 @@ class Friedman1Groundtruth(Groundtruth):
                 return complete_integral_12 + integral_3 + 5 + 5 * x5
 
         return partial_dependence
+
+    def get_theoretical_accumulated_local_effects(self, feature: str) -> Callable:
+        """Get the theoretical accumulated local effects function for a feature.
+        Only uniform feature distribution is supported.
+
+        Parameters
+        ----------
+        feature : str
+            The feature for which to compute the accumulated local effects function.
+
+        Returns
+        -------
+        Callable
+            The theoretical accumulated local effects function for the feature.
+        """
+        raise NotImplementedError("Theoretical accumulated local effects are not implemented for Friedman1.")

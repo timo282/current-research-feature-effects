@@ -1,9 +1,11 @@
-from typing_extensions import List, Dict, Callable, Tuple
+from typing_extensions import List, Dict, Callable, Tuple, Literal
 from copy import deepcopy
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import KFold
+
+from current_research_feature_effects.data_generating.data_generation import Groundtruth
 
 
 def _partial_dependence(estimator: BaseEstimator, X: np.ndarray, feature: int, grid: np.ndarray) -> Dict:
@@ -259,6 +261,68 @@ def compute_ales(
         )
 
     return ales
+
+
+def compute_theoretical_effects(
+    groundtruth: Groundtruth,
+    effect: Literal["pdp", "ale"],
+    feature_names: List[str],
+    grid_values: List[np.ndarray],
+    center_curves: bool = False,
+    remove_first_last: bool = False,
+) -> List[Dict]:
+    """
+    Compute theoretical partial dependence plots for a given groundtruth
+    and apply it to the grid_values.
+
+    Parameters
+    ----------
+    groundtruth : Groundtruth
+        Groundtruth object to compute theoretical partial dependence for.
+    effect : Literal["pdp", "ale"]
+        Type of effect to compute: partial dependence or accumulated local effects.
+    feature_names : List[str]
+        Names of features to compute theoretical partial dependence for.
+    grid_values : List[np.ndarray]
+        Grid of values to compute theoretical partial dependence for.
+    center_curves : bool, optional
+        Whether to center curves by substracting the mean (based on grid values) or not, by default False.
+    remove_first_last : bool, optional
+        Whether to remove the first and last grid values from the effects before centering and
+        returning or not, by default False.
+
+    Returns
+    -------
+    List[Dict]
+        List of dictionaries containing the feature name, grid values and computed partial dependence values.
+    """
+    effects = []
+    for f_name, grid in zip(feature_names, grid_values):
+        if effect == "pdp":
+            feature_effect = groundtruth.get_theoretical_partial_dependence(feature=f_name)(grid)
+        elif effect == "ale":
+            feature_effect = groundtruth.get_theoretical_accumulated_local_effects(feature=f_name)(grid)
+        else:
+            raise ValueError("Effect type not supported")
+
+        grid_ = grid
+
+        if remove_first_last:
+            feature_effect = feature_effect[1:-1]
+            grid_ = grid_[1:-1]
+
+        if center_curves:
+            feature_effect -= np.mean(feature_effect)
+
+        effects.append(
+            {
+                "feature": f_name,
+                "grid_values": grid_,
+                "effect": feature_effect,
+            }
+        )
+
+    return effects
 
 
 def compute_cv_feature_effect(

@@ -139,6 +139,22 @@ class Groundtruth(ABC, BaseEstimator):
             The theoretical partial dependence function for the feature.
         """
 
+    @abstractmethod
+    def get_theoretical_accumulated_local_effects(self, feature: str) -> Callable:
+        """Get the theoretical accumulated local effects function for a feature
+           (up to constant terms).
+
+        Parameters
+        ----------
+        feature : str
+            The feature for which to compute the accumulated local effects function.
+
+        Returns
+        -------
+        Callable
+            The theoretical accumulated local effects function for the feature.
+        """
+
     def get_theoretical_quantiles(self, feature: str, quantiles: np.ndarray) -> np.ndarray:
         """Get theoretical quantiles for a feature's marginal distribution.
 
