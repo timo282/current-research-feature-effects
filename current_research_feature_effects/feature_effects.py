@@ -298,6 +298,10 @@ def compute_theoretical_effects(
     """
     effects = []
     for f_name, grid in zip(feature_names, grid_values):
+
+        if remove_first_last:
+            grid = grid[1:-1]
+
         if effect == "pdp":
             feature_effect = groundtruth.get_theoretical_partial_dependence(feature=f_name)(grid)
         elif effect == "ale":
@@ -305,19 +309,13 @@ def compute_theoretical_effects(
         else:
             raise ValueError("Effect type not supported")
 
-        grid_ = grid
-
-        if remove_first_last:
-            feature_effect = feature_effect[1:-1]
-            grid_ = grid_[1:-1]
-
         if center_curves:
             feature_effect -= np.mean(feature_effect)
 
         effects.append(
             {
                 "feature": f_name,
-                "grid_values": grid_,
+                "grid_values": grid,
                 "effect": feature_effect,
             }
         )
