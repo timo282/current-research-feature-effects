@@ -74,7 +74,6 @@ def create_and_set_sim_dir(sim_config: ConfigParser) -> None:
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
         shutil.copy2("config.ini", base_dir / f"config_{simulation_name}.ini")
-        shutil.copy2("pyproject.toml", base_dir / f"dependencies_{simulation_name}.ini")
         os.chdir(base_dir)
     else:
         raise ValueError(f"Simulation {base_dir} already exists.")

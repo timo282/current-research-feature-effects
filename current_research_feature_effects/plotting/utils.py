@@ -15,8 +15,10 @@ def set_style():
             "font.size": 10,  # This sets the overall default font size
             "grid.linewidth": 0.5,  # Thin grid lines
             "figure.facecolor": "white",  # White background color
+            "figure.dpi": 300,  # Higher resolution
             "axes.facecolor": "white",  # White background color
             "axes.edgecolor": "white",  # White background edge color
+            "lines.linewidth": 1.5,  # Thin edge linewidth
         }
     )
 

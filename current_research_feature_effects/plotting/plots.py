@@ -1,10 +1,12 @@
 from configparser import ConfigParser
 import math
-from typing_extensions import Literal, List, Tuple, Optional
+from typing_extensions import Dict, Literal, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import transforms
+import matplotlib.colors as colors
+import matplotlib.cm as cm
 import seaborn as sns
 from sklearn.base import BaseEstimator
 from scipy.stats import pearsonr, spearmanr
@@ -277,3 +279,124 @@ def plot_correlation_analysis(
         return g, pd.DataFrame(correlation_results)
 
     return g
+
+
+def plot_mcvariance_over_features(
+    mc_variance_data: Dict,
+    grid_values: List[np.ndarray],
+    n_samples: np.ndarray,
+    feature_names: List[str],
+    title: Optional[str] = None,
+    sharey: bool = False,
+) -> plt.Figure:
+    """
+    Plot Monte Carlo variance over features for different sample sizes.
+
+    This function creates a series of line plots, each representing the Monte Carlo
+    variance of a feature effect estimate across different sample sizes. The x-axis
+    represents the feature values, while the y-axis represents the Monte Carlo variance.
+    Different sample sizes are represented by different colors.
+
+    Parameters
+    ----------
+    mc_variance_data : Dict
+        A dictionary containing the Monte Carlo variance data for different sample sizes
+        and features.
+    grid_values : List[np.ndarray]
+        A list of numpy arrays containing the grid values for each feature used to compute
+        the variances.
+    n_samples : np.ndarray
+        An array of sample sizes used to compute the Monte Carlo variances.
+    feature_names : List[str]
+        A list of feature names to plot.
+    title : str, optional
+        The title of the plot (default is None).
+
+    Returns
+    -------
+    plt.Figure
+        A Figure object containing the generated plots.
+    """
+    set_style()
+    n_feat = len(feature_names)
+    fig, axes = plt.subplots(1, n_feat, figsize=(4 * n_feat, 4), sharey=sharey)
+    fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
+
+    for f_idx, feature, ax in zip(range(n_feat), feature_names, axes):
+        norm = colors.LogNorm(vmin=min(n_samples), vmax=max(n_samples))
+        cmap = cm.viridis
+        for n in n_samples:
+            color = cmap(norm(n))
+            ax.plot(grid_values[f_idx], mc_variance_data[n][feature], color=color)
+            ax.fill_between(grid_values[f_idx], mc_variance_data[n][feature], alpha=0.1, color=color)
+        ax.set_title(f"MC Variance ${feature}$")
+        ax.set_xlabel(feature)
+        ax.set_ylabel("MC Variance")
+
+    sm = cm.ScalarMappable(norm=norm, cmap=cmap)
+    plt.colorbar(sm, ax=axes[-1], label="$n_{mc}$")
+
+    return fig
+
+
+def plot_mcvariance_mean(
+    mc_variance_data: Dict,
+    n_samples: np.ndarray,
+    feature_names: List[str],
+    title: Optional[str] = None,
+    sharey: bool = False,
+    xscale: Literal["linear", "log"] = "linear",
+    yscale: Literal["linear", "log"] = "log",
+) -> plt.Figure:
+    """
+    Plot the mean Monte Carlo variance over features for different sample sizes.
+
+    This function creates a series of line plots, each representing the mean Monte Carlo
+    variance of a feature effect estimate across different sample sizes. The x-axis
+    represents the sample sizes, while the y-axis represents the mean Monte Carlo variance.
+
+    Parameters
+    ----------
+    mc_variance_data : Dict
+        A dictionary containing the Monte Carlo variance data for different sample sizes
+        and features.
+    n_samples : np.ndarray
+        An array of sample sizes used to compute the Monte Carlo variances.
+    feature_names : List[str]
+        A list of feature names to plot.
+    title : str, optional
+        The title of the plot (default is None).
+    sharey : bool, optional
+        If True, share the y-axis across all subplots (default is False).
+    xscale : {'linear', 'log'}, optional
+        The scale of the x-axis (default is 'linear').
+    yscale : {'linear', 'log'}, optional
+        The scale of the y-axis (default is 'log').
+
+    Returns
+    -------
+    plt.Figure
+        A Figure object containing the generated plots.
+    """
+    set_style()
+    n_feat = len(feature_names)
+    fig, axes = plt.subplots(
+        1,
+        n_feat,
+        figsize=(4 * n_feat, 4),
+        sharey=sharey,
+    )
+    fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
+
+    for feature, ax in zip(feature_names, axes):
+        means = []
+        for n in n_samples:
+            means.append(np.mean(mc_variance_data[n][feature]))
+        ax.plot(n_samples, means, marker="+")
+        ax.set_yscale(yscale)
+        ax.set_xscale(xscale)
+        ax.set_title(f"Mean MC Variance ${feature}$")
+        ax.set_xlabel("$n_{mc}$")
+        ax.set_ylabel("Mean MC Variance")
+
+    return fig
