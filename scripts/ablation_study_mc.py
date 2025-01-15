@@ -106,11 +106,11 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(Path(args.config))
 
-    EXPERIMENT_PATH = Path(config["storage"]["experiments_dir"]) / config["experiment"]["name"]
+    EXPERIMENT_PATH = Path(config["storage"]["experiments_dir"]) / config["storage"]["experiment_name"]
     os.makedirs(EXPERIMENT_PATH, exist_ok=True)
     shutil.copy2(Path(args.config), EXPERIMENT_PATH / Path(args.config).name)
 
-    with open("../configs/datasets.yaml", "r") as file:
+    with open(Path(config["study_params"]["datasets_yaml"]), "r") as file:
         datasets_config = yaml.safe_load(file)
 
     groundtruths = [
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         "n_samples": np.logspace(
             int(config.get("study_params", "n_samples").split(",")[0]),
             int(config.get("study_params", "n_samples").split(",")[1]),
-            int(num=config.get("study_params", "n_samples").split(",")[2]),
+            num=int(config.get("study_params", "n_samples").split(",")[2]),
         ),
         "k": config.getint("study_params", "k"),
         "n_grid_points": config.getint("study_params", "n_grid_points"),
