@@ -14,11 +14,11 @@ pandas = "^2.2.1"
 seaborn = "^0.13.2"
 xgboost = "^2.0.3"
 pygam = "^0.9.1"
-sympy = "^1.12"
 matplotlib = "^3.10.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.5"
+ipywidgets = "^8.1.5"
 
 [tool.black]
 line-length = 120
