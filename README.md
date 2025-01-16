@@ -29,7 +29,7 @@ poetry config virtualenvs.in-project true
 poetry install
 ```
 
-4a. If the specified Python Version is not found:
+4a. If the specified Python Version (3.11 for this project) is not found:
 
 If the required Python Version is not installed on your device, install Python from the official [python.org](https://www.python.org/downloads) website.
 
@@ -38,13 +38,29 @@ Then run
 poetry env use <path-to-your-python-version>
 ```
 
-## Usage & Helpful Information
+## Usage
+
+### Run Ablation Study on MC Variance
+
+Navigate to the root folder of this repository and run:
+
+```
+poetry run python scripts/ablation_study_mc.py --config configs/ablation_study_mc.ini
+```
+
+Results can be found in the `experiments` directory under the corresponding experiment.
+
+### Run Main Study
 
 To run a simulation, specify your configuration/parameters for the simulation in the `config.ini` file. Then go to the `current_research_feature_effects` directory, which is the python project and therefore the core of the repository. Run the `main.py` script, which is the entry point of the project. It will automatically run a simulation based on the parameters you have provided in the `config.ini`. It will create a new subdirectory in `simulations` based on the simulation name you specified in the config, it will copy the config-file to this directory, and store all simulation results (trained models as joblib-files, model results, tuning trials, and feature effects results in database-files).
 
 Random seeds are used throughout the entire simulation to make all results reproducible. Datasets created in each simulation run are not stored, but can simply be recreated afterwards if needed by using the number of the simulation run as seed for the dataset generation.
 
-During development, to add new packages to the project, use:
-```
-poetry add <package-name>
-```
+
+## Repository Structure
+
+tbd
+
+## Contact
+
+tbd
