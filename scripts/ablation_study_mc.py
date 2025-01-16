@@ -90,13 +90,13 @@ def perform_mc_ablation_study(groundtruth: Groundtruth, study_params: Dict):
         results["ale"][n_samples] = {k: v / study_params["k"] for k, v in ale_variances.items()}
 
     # save results, groundtruth and grid values
-    os.makedirs(EXPERIMENT_PATH / str(groundtruth), exist_ok=True)
-    dump(results, EXPERIMENT_PATH / str(groundtruth) / "ablation_results.joblib")
-    dump(groundtruth, EXPERIMENT_PATH / str(groundtruth) / "groundtruth.joblib")
+    os.makedirs(Path(str(groundtruth)), exist_ok=True)
+    dump(results, Path(str(groundtruth)) / "ablation_results.joblib")
+    dump(groundtruth, Path(str(groundtruth)) / "groundtruth.joblib")
     if study_params["remove_first_last"]:
-        dump([grid[1:-1] for grid in grid_values], EXPERIMENT_PATH / str(groundtruth) / "grid_values.joblib")
+        dump([grid[1:-1] for grid in grid_values], Path(str(groundtruth)) / "grid_values.joblib")
     else:
-        dump(grid_values, EXPERIMENT_PATH / str(groundtruth) / "grid_values.joblib")
+        dump(grid_values, Path(str(groundtruth)) / "grid_values.joblib")
 
 
 if __name__ == "__main__":
@@ -144,6 +144,7 @@ if __name__ == "__main__":
         "remove_first_last": config.getboolean("study_params", "remove_first_last"),
     }
 
+    os.chdir(EXPERIMENT_PATH)
     num_processes = min(len(groundtruths), cpu_count())
 
     # perform ablation studies in parallel
