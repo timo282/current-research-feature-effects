@@ -1,3 +1,4 @@
+import argparse
 from configparser import ConfigParser
 from pathlib import Path
 import warnings
@@ -25,11 +26,7 @@ from current_research_feature_effects.feature_effects import (
     compute_ales,
     compute_cv_feature_effect,
     compare_effects,
-    get_modified_grids,
 )
-
-sim_config = ConfigParser()
-sim_config.read("config.ini")
 
 
 def simulate(
@@ -53,7 +50,7 @@ def simulate(
     feature_names = groundtruth.feature_names
     grid_points = config.getint("feature_effects", "grid_points")
     quantiles = np.linspace(0, 1, grid_points, endpoint=True)
-    base_grids = [groundtruth.get_theoretical_quantiles(feature, quantiles) for feature in feature_names]
+    grid_values = [groundtruth.get_theoretical_quantiles(feature, quantiles) for feature in feature_names]
     center_curves = config["feature_effects"].getboolean("centered")
     remove_first_last = config["feature_effects"].getboolean("remove_first_last")
 
@@ -65,6 +62,8 @@ def simulate(
         snr=0,
         seed=config.getint("simulation_metadata", "mc_data_seed"),
     )
+
+    k_cv = config.getint("simulation_metadata", "k_cv")
 
     for sim_no in range(n_sim):
         for n_train, n_val in n_train_vals:
@@ -79,32 +78,26 @@ def simulate(
                     seed=sim_no,
                 )
 
-                # cv = KFold(n_splits=5, shuffle=True, random_state=42)
-                # X_all, y_all = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
-                # cv_splits = cv.split(X=X_all, y=y_all)
-                # val_folds = [X_all[split[1]] for split in cv_splits]
+                cv = KFold(n_splits=5, shuffle=True, random_state=42)
+                X_all, y_all = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
 
-                # train_grid, val_grid, mc_grid, *cv_grids = get_modified_grids(
-                #     base_grids=base_grids, Xs=[X_train, X_val, X_mc] + val_folds, feature_names=feature_names
-                # )
+                pdp_groundtruth = compute_pdps(
+                    groundtruth,
+                    X_mc,
+                    feature_names,
+                    grid_values=grid_values,
+                    center_curves=center_curves,
+                    remove_first_last=remove_first_last,
+                )
 
-                # pdp_groundtruth = compute_pdps(
-                #     groundtruth,
-                #     X_mc,
-                #     feature_names,
-                #     grid_values=mc_grid,
-                #     center_curves=center_curves,
-                #     remove_first_last=remove_first_last,
-                # )
-
-                # ale_groundtruth = compute_ales(
-                #     groundtruth,
-                #     X_mc,
-                #     feature_names,
-                #     grid_values=mc_grid,
-                #     center_curves=center_curves,
-                #     remove_first_last=remove_first_last,
-                # )
+                ale_groundtruth = compute_ales(
+                    groundtruth,
+                    X_mc,
+                    feature_names,
+                    grid_values=grid_values,
+                    center_curves=center_curves,
+                    remove_first_last=remove_first_last,
+                )
 
                 for model_str in models:
                     model_name = f"{model_str}_{sim_no+1}_{n_train}_{int(snr)}"
@@ -156,16 +149,17 @@ def simulate(
                         os.makedirs(Path(str(groundtruth)) / config.get("storage", "models"), exist_ok=True)
                         dump(
                             model,
-                            Path(os.getcwd()) / str(groundtruth) / config.get("storage", "models") / f"{model_name}.joblib",
+                            Path(os.getcwd())
+                            / str(groundtruth)
+                            / config.get("storage", "models")
+                            / f"{model_name}.joblib",
                         )
 
                         # evaluate model
                         model_results = eval_model(model, X_train, y_train, X_test, y_test)
                     except Exception as e:
-                        model_results = (np.nan,)*6
-                        warnings.warn(
-                            f"Training of model {model_name} failed with error:\n{e}"
-                        )
+                        model_results = (np.nan,) * 6
+                        warnings.warn(f"Training of model {model_name} failed with error:\n{e}")
 
                     df_model_result = pd.DataFrame(
                         {
@@ -191,84 +185,106 @@ def simulate(
                         if_exists="append",
                     )
 
-                    # # calculate pdps
-                    # pdp_train = compute_pdps(
-                    #     model, X_train, feature_names, train_grid, center_curves, remove_first_last
-                    # )
-                    # pdp_val = compute_pdps(model, X_val, feature_names, val_grid, center_curves, remove_first_last)
-                    # pdp_cv = compute_cv_feature_effect(
-                    #     model, X_all, y_all, cv, feature_names, cv_grids, compute_pdps, center_curves, remove_first_last
-                    # )
+                    # calculate pdps
+                    pdp_train = compute_pdps(
+                        model, X_train, feature_names, grid_values, center_curves, remove_first_last
+                    )
+                    pdp_val = compute_pdps(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
+                    pdp_cv = compute_cv_feature_effect(
+                        model,
+                        X_all,
+                        y_all,
+                        cv,
+                        feature_names,
+                        [grid_values] * k_cv,
+                        compute_pdps,
+                        center_curves,
+                        remove_first_last,
+                    )
 
-                    # # # compute pdp feature effect metrics
-                    # # pdp_comparison = compare_effects(
-                    # #     pdp_groundtruth,
-                    # #     pdp_train,
-                    # #     mean_squared_error,
-                    # # )
-                    # # df_pdp_result = pd.concat(
-                    # #     (
-                    # #         pd.DataFrame(
-                    # #             {
-                    # #                 "model_id": [model_name],
-                    # #                 "model": [model_str],
-                    # #                 "simulation": [sim_no + 1],
-                    # #                 "n_train": [n_train],
-                    # #                 "snr": [snr],
-                    # #             }
-                    # #         ),
-                    # #         pdp_comparison,
-                    # #     ),
-                    # #     axis=1,
-                    # # )
-
-                    # # # save pdp results
-                    # # df_pdp_result.to_sql(
-                    # #     "pdp_results",
-                    # #     con=engine_effects_results,
-                    # #     if_exists="append",
-                    # # )
-
-                    # # calculate ales
-                    # ale_train = compute_ales(
-                    #     model, X_train, feature_names, train_grid, center_curves, remove_first_last
+                    # # compute pdp feature effect metrics
+                    # pdp_comparison = compare_effects(
+                    #     pdp_groundtruth,
+                    #     pdp_train,
+                    #     mean_squared_error,
                     # )
-                    # ale_val = compute_ales(model, X_val, feature_names, val_grid, center_curves, remove_first_last)
-                    # ale_cv = compute_cv_feature_effect(
-                    #     model, X_all, y_all, cv, feature_names, cv_grids, compute_ales, center_curves, remove_first_last
+                    # df_pdp_result = pd.concat(
+                    #     (
+                    #         pd.DataFrame(
+                    #             {
+                    #                 "model_id": [model_name],
+                    #                 "model": [model_str],
+                    #                 "simulation": [sim_no + 1],
+                    #                 "n_train": [n_train],
+                    #                 "snr": [snr],
+                    #             }
+                    #         ),
+                    #         pdp_comparison,
+                    #     ),
+                    #     axis=1,
                     # )
 
-                    # # # compute ale feature effect metrics
-                    # # ale_comparison = compare_effects(
-                    # #     ale_groundtruth,
-                    # #     ale_train,
-                    # #     mean_squared_error,
-                    # # )
-                    # # df_ale_result = pd.concat(
-                    # #     (
-                    # #         pd.DataFrame(
-                    # #             {
-                    # #                 "model_id": [model_name],
-                    # #                 "model": [model_str],
-                    # #                 "simulation": [sim_no + 1],
-                    # #                 "n_train": [n_train],
-                    # #                 "snr": [snr],
-                    # #             }
-                    # #         ),
-                    # #         ale_comparison,
-                    # #     ),
-                    # #     axis=1,
-                    # # )
+                    # # save pdp results
+                    # df_pdp_result.to_sql(
+                    #     "pdp_results",
+                    #     con=engine_effects_results,
+                    #     if_exists="append",
+                    # )
 
-                    # # # save ale results
-                    # # df_ale_result.to_sql(
-                    # #     "ale_results",
-                    # #     con=engine_effects_results,
-                    # #     if_exists="append",
-                    # # )
+                    # calculate ales
+                    ale_train = compute_ales(
+                        model, X_train, feature_names, grid_values, center_curves, remove_first_last
+                    )
+                    ale_val = compute_ales(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
+                    ale_cv = compute_cv_feature_effect(
+                        model,
+                        X_all,
+                        y_all,
+                        cv,
+                        feature_names,
+                        grid_values,
+                        compute_ales,
+                        center_curves,
+                        remove_first_last,
+                    )
+
+                    # # compute ale feature effect metrics
+                    # ale_comparison = compare_effects(
+                    #     ale_groundtruth,
+                    #     ale_train,
+                    #     mean_squared_error,
+                    # )
+                    # df_ale_result = pd.concat(
+                    #     (
+                    #         pd.DataFrame(
+                    #             {
+                    #                 "model_id": [model_name],
+                    #                 "model": [model_str],
+                    #                 "simulation": [sim_no + 1],
+                    #                 "n_train": [n_train],
+                    #                 "snr": [snr],
+                    #             }
+                    #         ),
+                    #         ale_comparison,
+                    #     ),
+                    #     axis=1,
+                    # )
+
+                    # # save ale results
+                    # df_ale_result.to_sql(
+                    #     "ale_results",
+                    #     con=engine_effects_results,
+                    #     if_exists="append",
+                    # )
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", "-c", type=str, required=True, help="Path to config.ini file")
+    args = parser.parse_args()
+    sim_config = ConfigParser()
+    sim_config.read(Path(args.config))
+
     sim_params = parse_sim_params(sim_config)
     create_and_set_sim_dir(sim_config)
     groundtruths = sim_params["groundtruths"]
