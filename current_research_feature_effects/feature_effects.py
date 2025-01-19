@@ -1,11 +1,131 @@
-from typing_extensions import List, Dict, Callable, Tuple, Literal
+from typing_extensions import List, Dict, Callable, Tuple, Literal, Union
 from copy import deepcopy
+from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import KFold
 
 from current_research_feature_effects.data_generating.data_generation import Groundtruth
+
+
+EffectType = Literal["pdp", "ale"]
+
+
+@dataclass
+class FeatureEffect:
+    """
+    Class to store and manipulate feature effects (PDP or ALE).
+    """
+
+    effect_type: EffectType
+    features: Dict[str, Dict[str, np.ndarray]]  # {feature_name: {'grid': array, 'effect': array}}
+
+    def __init__(
+        self,
+        effect_type: EffectType,
+        feature_effects: List[Dict],  # List of dicts with 'feature', 'grid_values', 'effect' keys
+    ):
+        """
+        Initialize from list of feature effect dictionaries.
+
+        Parameters
+        ----------
+        effect_type : EffectType
+            Type of effect (PDP or ALE).
+        feature_effects : List[Dict]
+            List of dictionaries containing feature effect information.
+        """
+        self.effect_type = effect_type
+        self.features = {
+            effect["feature"]: {"grid": np.array(effect["grid_values"]), "effect": np.array(effect["effect"])}
+            for effect in feature_effects
+        }
+
+    def __repr__(self) -> str:
+        features_str = ", ".join(self.features.keys())
+        return f"FeatureEffect(type={self.effect_type}, features=[{features_str}])"
+
+    def _validate_operation(self, other: "FeatureEffect") -> None:
+        """Validate that two FeatureEffects can be combined."""
+        if not isinstance(other, FeatureEffect):
+            raise TypeError(f"Unsupported operand type: {type(other)}")
+
+        if self.effect_type != other.effect_type:
+            raise ValueError(f"Cannot combine different effect types: {self.effect_type} and {other.effect_type}")
+
+        if set(self.features.keys()) != set(other.features.keys()):
+            raise ValueError("Feature sets must match for arithmetic operations")
+
+        for feature in self.features:
+            if not np.array_equal(self.features[feature]["grid"], other.features[feature]["grid"]):
+                raise ValueError(f"Grid values must match for feature {feature}")
+
+    def _apply_operation(self, other: Union["FeatureEffect", float, int], op) -> "FeatureEffect":
+        """Apply operation to effect values."""
+        if isinstance(other, (float, int)):
+            # Scalar operation
+            new_effects = [
+                {
+                    "feature": feature,
+                    "grid_values": self.features[feature]["grid"],
+                    "effect": op(self.features[feature]["effect"], other),
+                }
+                for feature in self.features
+            ]
+        else:
+            # FeatureEffect operation
+            self._validate_operation(other)
+            new_effects = [
+                {
+                    "feature": feature,
+                    "grid_values": self.features[feature]["grid"],
+                    "effect": op(self.features[feature]["effect"], other.features[feature]["effect"]),
+                }
+                for feature in self.features
+            ]
+
+        return FeatureEffect(self.effect_type, new_effects)
+
+    def __add__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self._apply_operation(other, np.add)
+
+    def __sub__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self._apply_operation(other, np.subtract)
+
+    def __mul__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self._apply_operation(other, np.multiply)
+
+    def __truediv__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        if isinstance(other, (float, int)) and other == 0:
+            raise ZeroDivisionError("Division by zero")
+        return self._apply_operation(other, np.divide)
+
+    def __pow__(self, power: float) -> "FeatureEffect":
+        return self._apply_operation(power, np.power)
+
+    def __radd__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self.__add__(other)
+
+    def __rsub__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self._apply_operation(other, lambda x, y: y - x)
+
+    def __rmul__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self.__mul__(other)
+
+    def __rtruediv__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
+        return self._apply_operation(other, lambda x, y: y / x)
+
+    def to_list(self) -> List[Dict]:
+        """Convert back to list of dictionaries format."""
+        return [
+            {
+                "feature": feature,
+                "grid_values": self.features[feature]["grid"],
+                "effect": self.features[feature]["effect"],
+            }
+            for feature in self.features
+        ]
 
 
 def _partial_dependence(estimator: BaseEstimator, X: np.ndarray, feature: int, grid: np.ndarray) -> Dict:
@@ -152,7 +272,7 @@ def compute_pdps(
     grid_values: List[np.ndarray],
     center_curves: bool = False,
     remove_first_last: bool = False,
-) -> List[Dict]:
+) -> FeatureEffect:
     """
     Compute partial dependence plots for a given model and dataset.
 
@@ -174,8 +294,8 @@ def compute_pdps(
 
     Returns
     -------
-    List[Dict]
-        List of dictionaries containing the feature name, grid values and computed partial dependence values.
+    FeatureEffect
+        Object containing the computed partial dependence values.
     """
     pdp = []
     for feature, f_name, grid in zip(range(X.shape[1]), feature_names, grid_values):
@@ -201,7 +321,7 @@ def compute_pdps(
             }
         )
 
-    return pdp
+    return FeatureEffect("pdp", pdp)
 
 
 def compute_ales(
@@ -211,7 +331,7 @@ def compute_ales(
     grid_values: List[np.ndarray],
     center_curves: bool = False,
     remove_first_last: bool = False,
-) -> List[Dict]:
+) -> FeatureEffect:
     """
     Compute accumulated local effects for a given model and dataset.
 
@@ -233,8 +353,8 @@ def compute_ales(
 
     Returns
     -------
-    List[Dict]
-        List of dictionaries containing the feature name, grid values and computed accumulated local effects values.
+    FeatureEffect
+        Object containing the computed accumulated local effects values.
     """
     ales = []
     X_df = pd.DataFrame(X, columns=feature_names)
@@ -260,17 +380,17 @@ def compute_ales(
             }
         )
 
-    return ales
+    return FeatureEffect("ale", ales)
 
 
 def compute_theoretical_effects(
     groundtruth: Groundtruth,
-    effect: Literal["pdp", "ale"],
+    effect: EffectType,
     feature_names: List[str],
     grid_values: List[np.ndarray],
     center_curves: bool = False,
     remove_first_last: bool = False,
-) -> List[Dict]:
+) -> FeatureEffect:
     """
     Compute theoretical partial dependence plots for a given groundtruth
     and apply it to the grid_values.
@@ -293,8 +413,8 @@ def compute_theoretical_effects(
 
     Returns
     -------
-    List[Dict]
-        List of dictionaries containing the feature name, grid values and computed partial dependence values.
+    FeatureEffect
+        Object containing the computed theoretical partial dependence values.
     """
     effects = []
     for f_name, grid in zip(feature_names, grid_values):
@@ -320,7 +440,7 @@ def compute_theoretical_effects(
             }
         )
 
-    return effects
+    return FeatureEffect(effect, effects)
 
 
 def compute_cv_feature_effect(
@@ -333,7 +453,7 @@ def compute_cv_feature_effect(
     effect_fn: Callable,
     center_curves: bool = False,
     remove_first_last: bool = False,
-) -> List[Dict]:
+) -> FeatureEffect:
     """
     Compute feature effects using cross-validation.
 
@@ -365,11 +485,8 @@ def compute_cv_feature_effect(
 
     Returns
     -------
-    List[Dict]
-        List of dictionaries, one per feature, containing:
-        - 'feature': Feature name
-        - 'grid_values': Grid points for this feature
-        - 'effect': Averaged effect values across folds
+    FeatureEffect
+        Object containing the averaged feature effects across folds.
 
     Raises
     ------
@@ -385,41 +502,10 @@ def compute_cv_feature_effect(
         effect_fold = effect_fn(model_fold, X_val, feature_names, cv_grid, center_curves, remove_first_last)
         effects.append(effect_fold)
 
-    averaged_effects = []
-    for feature in feature_names:
-        grids = [item["grid_values"] for sublist in effects for item in sublist if item["feature"] == feature]
-        all_same = all(np.array_equal(grid, grids[0]) for grid in grids)
+    averaged_effects = effects[0]
+    for effect in effects[1:]:
+        averaged_effects += effect
 
-        if not all_same:
-            raise ValueError(f"Grid values not consistent for feature {feature}")
-
-        effect_folds = [item["effect"] for sublist in effects for item in sublist if item["feature"] == feature]
-        averaged_effect = {"feature": feature, "grid_values": grids[0], "effect": np.mean(effect_folds, axis=0)}
-
-        averaged_effects.append(averaged_effect)
+    averaged_effects /= len(effects)
 
     return averaged_effects
-
-
-def compare_effects(
-    effects_groundtruth: List[Dict],
-    effects_model: List[Dict],
-    metric: Callable,
-) -> pd.DataFrame:
-    comparison = {"metric": metric.__name__}
-    for i, effects_model_feature in enumerate(effects_model):
-        effects_groundtruth_feature = effects_groundtruth[i]
-        if effects_groundtruth_feature["feature"] != effects_model_feature["feature"]:
-            raise ValueError("Features in groundtruth and model effects do not match")
-        if not np.array_equal(
-            effects_groundtruth_feature["grid_values"],
-            effects_model_feature["grid_values"],
-        ):
-            raise ValueError("Grid values in groundtruth and model effects do not match")
-
-        comparison[effects_model_feature["feature"]] = metric(
-            effects_groundtruth_feature["effect"],
-            effects_model_feature["effect"],
-        )
-
-    return pd.DataFrame(comparison, index=[0])
