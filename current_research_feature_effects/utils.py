@@ -34,7 +34,7 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
             sim_config.get("simulation_params", "n_val").split(","),
         )
     ]
-    param_dict["snr"] = [float(x) for x in sim_config.get("simulation_params", "snr").split(",")]
+    param_dict["snr"] = sim_config.getfloat("simulation_params", "snr")
 
     with open(models_config_path, "r") as file:
         models_config: Dict = yaml.safe_load(file)

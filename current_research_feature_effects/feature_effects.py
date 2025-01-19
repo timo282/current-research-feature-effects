@@ -509,3 +509,36 @@ def compute_cv_feature_effect(
     averaged_effects /= len(effects)
 
     return averaged_effects
+
+
+def compute_feature_effect_metrics(estimates: List[FeatureEffect], groundtruth: FeatureEffect):
+    """
+    Compute pointwise metrics to compare feature effects estimates with groundtruth.
+
+    Parameters
+    ----------
+    estimates : List[FeatureEffect]
+        List of feature effect estimates.
+    groundtruth : FeatureEffect
+        Groundtruth feature effect.
+
+    Returns
+    -------
+    Dict
+        Dictionary containing the computed metrics.
+    """
+    metrics = {}
+
+    mean_estimate = sum(estimates) / len(estimates)
+
+    for estimate in estimates:
+        se = (estimate - groundtruth) ** 2
+        sd = (estimate - mean_estimate) ** 2
+        metrics["MSE"] = se if "MSE" not in metrics else metrics["MSE"] + se
+        metrics["Variance"] = sd if "Variance" not in metrics else metrics["Variance"] + sd
+
+    metrics["MSE"] /= len(estimates)
+    metrics["Variance"] /= len(estimates)
+    metrics["Bias^2"] = (mean_estimate - groundtruth) ** 2
+
+    return metrics
