@@ -167,7 +167,7 @@ solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation
 for $|S|=1$, the ALE plot is defined as
 
 \begin{eqnarray}
-    ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} E_{X_C|X_S}
+    ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S}
     \left[\hat{f}^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant} \\
     &=& \int_{x_{\text{min},s}}^{x_S} \int_{x_C}
     \hat{f}^S(z_S, x_C)\mathbb{P}(x_C|z_S)dx_{C}dz_{S} - \text{constant},
@@ -251,7 +251,7 @@ definition explicit:
     The ALE ground truth is the ALE applied to function $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$ of the data generating process.
 
     \begin{equation}
-        ALE_{f,S}(x_S) = \int_{x_{\text{min},s}}^{x_S} E_{X_C|X_S} \left[f^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant}
+        ALE_{f,S}(x_S) = \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S} \left[f^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant}
     \end{equation}
 
     \noindent where $f^S(x_S, x_C) = \frac{\partial f(x_S, x_C)}{\partial x_S}$ and \text{constant} chosen such that the effect has a mean of $0$ w.r.t. the marginal distribution of $X_S$.
@@ -374,7 +374,108 @@ aggregate them over the marginal distribution of $X_S$ (e.g.,
 estimated by averaging over the grid points if chosen appropriately)
 to obtain a single error measure per feature effect.
 
-\section{Overview of Test Functions}\label{sec:test-functions}
+While our definitions are based on the PDP, they can be directly applied to the
+ALE as well.
+
+\section{Test Functions for Simulation Studies}\label{sec:test-functions}
+
+Test functions play a crucial role in research, e.g.\ for evaluating and
+comparing different methodological approaches, or when conducting simulation
+studies. This section synthesizes commonly used test functions across various
+domains, providing structured guidance for researchers --- particularly those
+in Interpretable ML --- in selecting appropriate test functions for their
+simulation studies. By examining test functions from different fields and their
+purposes of application, we aim to facilitate experimental design decisions.
+While this overview is not exhaustive, it highlights key test functions and
+their characteristics to help researchers make informed choices for their
+specific research needs.
+
+\paragraph{Test Functions in Optimization.}
+The field of optimization, where test functions are essential to enable the
+assessment and comparison of optimization algorithms, has established a rich
+foundation of test functions. A fundamental approach involves using simple
+mathematical expressions like the sphere function~\cite{more_testing_1981}.
+These basic functions are often combined with more complex ones like Branin or
+Rosenbrock to create comprehensive test suites that incorporate important
+properties such as nonlinearity, non-separability, and
+scalability~\cite{whitley_building_1998}. A notable framework in this domain is
+the Comparing Continuous Optimizer (COCO) platform with its Black Box
+Optimization Benchmark (BBOB), offering a structured approach to testing
+continuous optimization algorithms through artificial test
+functions~\cite{hansen_coco_2016}. These classical test function suites are
+well-established in optimization and may also serve as a basis for
+Interpretable ML researchers. However, it is important to note that the ability
+of these artifical test functions to represent complex real-world behavior is
+limited~\cite{zaefferer_simulation-based_2017}.
+
+\paragraph{Physics-Inspired Test Functions.}
+
+Physics-derived functions offer a compelling source of real-world test cases,
+with the Feynman Symbolic Regression Database (FSReD) being a prominent
+example. FSReD comprises 100 physics equations from the seminal
+\textit{Feynman's Lectures on Physics (34--36)}, supplemented by 20 more
+challenging equations from other seminal physics texts~\cite{udrescu_ai_2020}.
+These equations span diverse physics domains including classical mechanics,
+electromagnetism, and quantum mechanics. They involve between one and nine
+independent variables and incorporate various elementary functions such as
+arithmetic operations, trigonometric functions, and exponentials. From that,
+tabular datasets were generated through random sampling from defined value
+ranges.
+
+Building upon this foundation,
+Matsubara~et~al.~\cite{matsubara_rethinking_2024} addressed several limitations
+of the original FSReD. Their enhanced framework introduces a three-tiered
+categorization of problems (easy, medium, hard) based on their complexity,
+incorporates dummy variables to simulate irrelevant features, and implements
+more realistic sampling ranges and strategies. Detailed specifications for all
+formulas, including their sampling parameters, are available in their work.
+
+While initially developed for symbolic regression tasks, many Feynman equations
+may serve as suitable test functions for simulation studies in Interpretable
+ML. Their basis in physical principles provides real-world relevance, though
+researchers should carefully select equations that align with their specific
+analytical objectives and complexity requirements.
+
+\paragraph{Test Functions for Interpretable Machine Learning.}
+The Interpretable ML field itself has developed several specialized test
+functions designed to evaluate specific aspects of interpretability methods.
+
+Goldstein et al.~\cite{goldstein_peeking_2015} used several simple test
+functions to demonstrate the behavior of Individual Conditional Expectation
+(ICE) curves. These include a simple additive function to demonstrate the
+absence of interactions, simple interactions to reveal heterogeneity that might
+be obscured by averaging procedures such as PDPs, and a specially designed
+function with an empty quadrant for assessing extrapolation behavior.
+
+Similarly, Liu et al.~\cite{liu_model_2018} focus on simple functions before
+progressing to more complex ones. They begin with basic two-variable scenarios
+--- using additive functions, interaction functions, and combinations thereof
+--- and examine these under both independent and correlated feature conditions
+to compare various feature effect methods. The advantage of these simple test
+functions is that solutions (e.g., feature effects) can also be computed
+analytically, and that they allow for deeper and more fine-grained analysis of
+individual aspects.
+
+A more complex test function suite was proposed by
+Tsang~et~al.~\cite{tsang_detecting_2017}, specifically designed to evaluate the
+detection of variable interactions. Their functions incorporate various types
+of interactions with different orders, strengths, non-linearities, and
+overlaps. While this makes them particularly valuable for interaction
+detection, they are also useful for evaluating other interpretability methods
+in scenarios with complex interactions.
+
+The Friedman functions~\cite{breiman_bagging_1996,friedman_multivariate_1991}
+serve as classical benchmarks applicable across various interpretability tasks.
+These three functions combine linear and non-linear effects with interactions,
+incorporating dummy variables and random noise terms to reflect realistic
+complexity. For detailed specifications, see~\cite{breiman_bagging_1996}.
+
+When choosing test functions for simulation studies in Interpretable ML,
+researchers should consider several criteria, including the specific aspects of
+interpretability being evaluated, the desired complexity level and number of
+variables, the presence of specific challenges such as correlation between
+features or interactions, the need for analytical solutions for validation, as
+well as the relevance to real-world applications in the domain of interest.
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
@@ -383,15 +484,6 @@ to obtain a single error measure per feature effect.
 \section{Discussion}\label{sec:discussion}
 
 \section{Conclusion}\label{sec:conclusion}
-
-% (see Fig.\@ \ref{fig1})
-
-% \begin{figure}[t]
-% \includegraphics[width=\textwidth]{example-image-duck}
-% \caption{A figure caption is always placed below the illustration.
-% Please note that short captions are centered, while long ones are
-% justified by the macro package automatically.} \label{fig1}
-% \end{figure}
 
 % \begin{table}[t]
 % \caption{Table captions should be placed above the
@@ -422,7 +514,7 @@ to obtain a single error measure per feature effect.
 %
 % ---- Bibliography ----
 \bibliographystyle{splncs04}
-\bibliography{paper/mybibliography}
+\bibliography{mybibliography}
 
 % appendix
 \newpage
