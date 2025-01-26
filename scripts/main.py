@@ -2,21 +2,23 @@ import argparse
 from configparser import ConfigParser
 from pathlib import Path
 import warnings
+import logging
 import os
-from typing_extensions import List, Dict, Tuple
 from multiprocessing import Pool, cpu_count
-from joblib import dump
 import numpy as np
-import pandas as pd
 from sqlalchemy import create_engine
 from sklearn.model_selection import KFold
 
-from current_research_feature_effects.data_generating.data_generation import generate_data, Groundtruth
+from current_research_feature_effects.data_generating.data_generation import generate_data
 from current_research_feature_effects.model_training import initialize_model
-from current_research_feature_effects.model_eval import eval_model
+from current_research_feature_effects.model_eval import eval_model, empty_dict
 from current_research_feature_effects.utils import (
-    parse_sim_params,
+    create_parameter_space,
     create_and_set_sim_dir,
+    save_model_results,
+    save_fe_aggregated_results,
+    save_fe_results,
+    SimulationParameter,
 )
 from current_research_feature_effects.feature_effects import (
     compute_pdps,
@@ -27,246 +29,179 @@ from current_research_feature_effects.feature_effects import (
 
 
 def simulate(
-    models: Dict[str, Dict],
-    groundtruth: Groundtruth,
-    n_sim: int,
-    n_train_vals: List[Tuple[int, int]],
-    snr: float,
-    config: ConfigParser,
+    params: SimulationParameter,
 ):
     np.random.seed(42)
+    logging.info(f"Starting simulation with parameters: {params.groundtruth}, {params.model_name}, {params.n_train}")
 
-    # create dir for dataset
-    os.mkdir(str(groundtruth))
+    # create directories
+    os.mkdir(str(params.groundtruth), exist_ok=True)
+    os.makedirs(Path(str(params.groundtruth)) / "results", exist_ok=True)
 
     # create databases for results
-    engine_model_results = create_engine(f"sqlite:///{str(groundtruth)}{config.get('storage', 'model_results')}")
-    engine_effects_results = create_engine(f"sqlite:///{str(groundtruth)}{config.get('storage', 'effects_results')}")
+    engine_model_results = create_engine(
+        f"sqlite:///{str(params.groundtruth)}{params.config.get('storage', 'model_results')}"
+    )
+    engine_effects_results = create_engine(
+        f"sqlite:///{str(params.groundtruth)}{params.config.get('storage', 'effects_results')}"
+    )
 
-    # calulate feature effects of groundtruth
-    feature_names = groundtruth.feature_names
-    grid_points = config.getint("feature_effects", "grid_points")
-    quantiles = np.linspace(0, 1, grid_points, endpoint=True)
-    grid_values = [groundtruth.get_theoretical_quantiles(feature, quantiles) for feature in feature_names]
-    center_curves = config["feature_effects"].getboolean("centered")
-    remove_first_last = config["feature_effects"].getboolean("remove_first_last")
+    feature_names = params.groundtruth.feature_names
+    grid_points = params.config.getint("feature_effects", "grid_points")
+    quantiles = np.linspace(0.0001, 0.9999, grid_points, endpoint=True)
+    grid_values = [params.groundtruth.get_theoretical_quantiles(feature, quantiles) for feature in feature_names]
+    center_curves = params.config["feature_effects"].getboolean("centered")
+    remove_first_last = params.config["feature_effects"].getboolean("remove_first_last")
+    k_cv = params.config.getint("simulation_metadata", "k_cv")
 
     # sample data for MC approximation of groundtruth feature effects
     X_mc, _, _, _ = generate_data(
-        groundtruth=groundtruth,
-        n_train=config.getint("simulation_metadata", "n_mc"),
+        groundtruth=params.groundtruth,
+        n_train=params.config.getint("simulation_metadata", "n_mc"),
         n_test=1,
         snr=0,
-        seed=config.getint("simulation_metadata", "mc_data_seed"),
+        seed=params.config.getint("simulation_metadata", "mc_data_seed"),
     )
 
-    k_cv = config.getint("simulation_metadata", "k_cv")
+    # estimate groundtruth feature effects
+    pdp_groundtruth = compute_pdps(
+        params.groundtruth,
+        X_mc,
+        feature_names,
+        grid_values,
+        center_curves=center_curves,
+        remove_first_last=remove_first_last,
+    )
+    ale_groundtruth = compute_ales(
+        params.groundtruth,
+        X_mc,
+        feature_names,
+        grid_values,
+        center_curves=center_curves,
+        remove_first_last=remove_first_last,
+    )
 
-    pdps_train = {}
-    pdps_val = {}
-    pdps_cv = {}
+    pdps = {}
+    ales = {}
 
-    ales_train = {}
-    ales_val = {}
-    ales_cv = {}
+    for sim_no in range(params.config.getint("simulation_params", "n_sim")):
+        logging.info(
+            f"Starting simulation {sim_no+1}/{params.config.getint('simulation_params', 'n_sim')} "
+            + f"for {params.groundtruth} {params.model_name} {params.n_train}."
+        )
+        # generate data
+        X_train, y_train, X_val, y_val, X_test, y_test = generate_data(
+            groundtruth=params.groundtruth,
+            n_train=params.n_train,
+            n_val=params.n_val,
+            n_test=params.config.getint("simulation_metadata", "n_test"),
+            snr=params.snr,
+            seed=sim_no,
+        )
 
-    for n_train, n_val in n_train_vals:
-        for sim_no in range(n_sim):
-            # generate data
-            X_train, y_train, X_val, y_val, X_test, y_test = generate_data(
-                groundtruth=groundtruth,
-                n_train=n_train,
-                n_val=n_val,
-                n_test=config.getint("simulation_metadata", "n_test"),
-                snr=snr,
-                seed=sim_no,
-            )
+        cv = KFold(n_splits=k_cv, shuffle=True, random_state=42)
+        X_all, y_all = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
 
-            cv = KFold(n_splits=5, shuffle=True, random_state=42)
-            X_all, y_all = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
+        # initialize model
+        model = initialize_model(
+            params.model_config["model"],
+            params.model_name,
+            params.groundtruth,
+            params.n_train,
+            params.snr,
+            params.config,
+        )
 
-            pdp_groundtruth = compute_pdps(
-                groundtruth,
-                X_mc,
-                feature_names,
-                grid_values=grid_values,
-                center_curves=center_curves,
-                remove_first_last=remove_first_last,
-            )
+        # try to train and evaluate model
+        try:
+            model.fit(X_train, y_train)
+            model_metrics = eval_model(model, X_train, y_train, X_test, y_test)
+        except Exception as e:
+            model_metrics = empty_dict()
+            warnings.warn(f"Training of model {params.model_name} {sim_no+1} {params.n_train} failed with error:\n{e}")
 
-            ale_groundtruth = compute_ales(
-                groundtruth,
-                X_mc,
-                feature_names,
-                grid_values=grid_values,
-                center_curves=center_curves,
-                remove_first_last=remove_first_last,
-            )
+        # save model results
+        save_model_results(model_metrics, conn=engine_model_results, params=params, sim_no=sim_no)
 
-            for model_str in models:
+        # calculate pdps
+        pdp_train = compute_pdps(model, X_train, feature_names, grid_values, center_curves, remove_first_last)
+        pdp_val = compute_pdps(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
+        pdp_cv = compute_cv_feature_effect(
+            model,
+            X_all,
+            y_all,
+            cv,
+            feature_names,
+            [grid_values] * k_cv,
+            compute_pdps,
+            center_curves,
+            remove_first_last,
+        )
 
-                model_name = f"{model_str}_{sim_no+1}_{n_train}_{int(snr)}"
-                model_dict = models[model_str]["model"]
-                model = initialize_model(model_dict, model_str, groundtruth, n_train, snr, config)
+        # calculate ales
+        ale_train = compute_ales(model, X_train, feature_names, grid_values, center_curves, remove_first_last)
+        ale_val = compute_ales(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
+        ale_cv = compute_cv_feature_effect(
+            model,
+            X_all,
+            y_all,
+            cv,
+            feature_names,
+            [grid_values] * k_cv,
+            compute_ales,
+            center_curves,
+            remove_first_last,
+        )
 
-                try:
-                    model.fit(X_train, y_train)
+        for split, pdp, ale in zip(["train", "val", "cv"], [pdp_train, pdp_val, pdp_cv], [ale_train, ale_val, ale_cv]):
+            pdps[split] = [pdp] if split not in pdps else pdps[split] + [pdp]
+            ales[split] = [ale] if split not in ales else ales[split] + [ale]
 
-                    # save model
-                    os.makedirs(Path(str(groundtruth)) / config.get("storage", "models"), exist_ok=True)
-                    dump(
-                        model,
-                        Path(os.getcwd()) / str(groundtruth) / config.get("storage", "models") / f"{model_name}.joblib",
-                    )
+    # compute metrics
+    pdp_metrics = {
+        split: compute_feature_effect_metrics(pdps_split, pdp_groundtruth) for split, pdps_split in pdps.items()
+    }
+    ale_metrics = {
+        split: compute_feature_effect_metrics(ales_split, ale_groundtruth) for split, ales_split in ales.items()
+    }
 
-                    # evaluate model
-                    model_results = eval_model(model, X_train, y_train, X_test, y_test)
-                except Exception as e:
-                    model_results = (np.nan,) * 6
-                    warnings.warn(f"Training of model {model_name} failed with error:\n{e}")
+    # save metrics
+    save_fe_results(pdp_metrics, engine_effects_results, params, "pdp")
+    save_fe_results(ale_metrics, engine_effects_results, params, "ale")
 
-                df_model_result = pd.DataFrame(
-                    {
-                        "model_id": [model_name],
-                        "model": [model_str],
-                        "simulation": [sim_no + 1],
-                        "n_train": [n_train],
-                        "snr": [snr],
-                        "mse_train": [model_results[0]],
-                        "mse_test": [model_results[1]],
-                        "mae_train": [model_results[2]],
-                        "mae_test": [model_results[3]],
-                        "r2_train": [model_results[4]],
-                        "r2_test": [model_results[5]],
-                    }
-                )
+    # aggregate metrics
+    pdp_metrics_agg = {
+        split: {metric: pdp_metrics[split][metric].mean() for metric in pdp_metrics[split].keys()}
+        for split in pdp_metrics.keys()
+    }
+    ale_metrics_agg = {
+        split: {metric: ale_metrics[split][metric].mean() for metric in ale_metrics[split].keys()}
+        for split in ale_metrics.keys()
+    }
 
-                # save model results
-                os.makedirs(Path(str(groundtruth)) / "results", exist_ok=True)
-                df_model_result.to_sql(
-                    "model_results",
-                    con=engine_model_results,
-                    if_exists="append",
-                )
-
-                # calculate pdps
-                pdp_train = compute_pdps(model, X_train, feature_names, grid_values, center_curves, remove_first_last)
-                pdp_val = compute_pdps(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
-                pdp_cv = compute_cv_feature_effect(
-                    model,
-                    X_all,
-                    y_all,
-                    cv,
-                    feature_names,
-                    [grid_values] * k_cv,
-                    compute_pdps,
-                    center_curves,
-                    remove_first_last,
-                )
-
-                pdps_train[model_str] = (
-                    [pdp_train] if model_str not in pdps_train else pdps_train[model_str] + [pdp_train]
-                )
-                pdps_val[model_str] = [pdp_val] if model_str not in pdps_val else pdps_val[model_str] + [pdp_val]
-                pdps_cv[model_str] = [pdp_cv] if model_str not in pdps_cv else pdps_cv[model_str] + [pdp_cv]
-
-                # calculate ales
-                ale_train = compute_ales(model, X_train, feature_names, grid_values, center_curves, remove_first_last)
-                ale_val = compute_ales(model, X_val, feature_names, grid_values, center_curves, remove_first_last)
-                ale_cv = compute_cv_feature_effect(
-                    model,
-                    X_all,
-                    y_all,
-                    cv,
-                    feature_names,
-                    grid_values,
-                    compute_ales,
-                    center_curves,
-                    remove_first_last,
-                )
-
-                ales_train[model_str] = (
-                    [ale_train] if model_str not in ales_train else ales_train[model_str] + [ale_train]
-                )
-                ales_val[model_str] = [ale_val] if model_str not in ales_val else ales_val[model_str] + [ale_val]
-                ales_cv[model_str] = [ale_cv] if model_str not in ales_cv else ales_cv[model_str] + [ale_cv]
-
-        # compute metrics
-        pdp_metrics_train = {
-            model_str: compute_feature_effect_metrics(pdps, pdp_groundtruth) for model_str, pdps in pdps_train.items()
-        }
-        pdp_metrics_val = {
-            model_str: compute_feature_effect_metrics(pdps, pdp_groundtruth) for model_str, pdps in pdps_val.items()
-        }
-        pdp_metrics_cv = {
-            model_str: compute_feature_effect_metrics(pdps, pdp_groundtruth) for model_str, pdps in pdps_cv.items()
-        }
-
-        ales_metrics_train = {
-            model_str: compute_feature_effect_metrics(ales, ale_groundtruth) for model_str, ales in ales_train.items()
-        }
-        ales_metrics_val = {
-            model_str: compute_feature_effect_metrics(ales, ale_groundtruth) for model_str, ales in ales_val.items()
-        }
-        ales_metrics_cv = {
-            model_str: compute_feature_effect_metrics(ales, ale_groundtruth) for model_str, ales in ales_cv.items()
-        }
-
-        # # compute ale feature effect metrics
-        # ale_comparison = compare_effects(
-        #     ale_groundtruth,
-        #     ale_train,
-        #     mean_squared_error,
-        # )
-        # df_ale_result = pd.concat(
-        #     (
-        #         pd.DataFrame(
-        #             {
-        #                 "model_id": [model_name],
-        #                 "model": [model_str],
-        #                 "simulation": [sim_no + 1],
-        #                 "n_train": [n_train],
-        #                 "snr": [snr],
-        #             }
-        #         ),
-        #         ale_comparison,
-        #     ),
-        #     axis=1,
-        # )
-
-        # # save ale results
-        # df_ale_result.to_sql(
-        #     "ale_results",
-        #     con=engine_effects_results,
-        #     if_exists="append",
-        # )
+    # save aggregated metrics
+    save_fe_aggregated_results(pdp_metrics_agg, engine_effects_results, params, "pdp")
+    save_fe_aggregated_results(ale_metrics_agg, engine_effects_results, params, "ale")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", type=str, required=True, help="Path to config.ini file")
     args = parser.parse_args()
     sim_config = ConfigParser()
     sim_config.read(Path(args.config))
 
-    sim_params = parse_sim_params(sim_config)
-    create_and_set_sim_dir(sim_config)
-    groundtruths = sim_params["groundtruths"]
-    num_processes = min(len(groundtruths), cpu_count())
+    param_space = create_parameter_space(sim_config)
+    logging.info(f"Created parameter space with {len(param_space)} simulation parameters.")
 
-    # Create a pool of processes and map groundtruths to the processing function
+    create_and_set_sim_dir(sim_config, config_path=Path(args.config))
+
+    num_processes = min(len(param_space), cpu_count())
+
     with Pool(processes=num_processes) as pool:
         pool.starmap(
             simulate,
-            [
-                (
-                    sim_params["models_config"],
-                    gt,
-                    sim_params["n_sim"],
-                    sim_params["n_train_val"],
-                    sim_params["snr"],
-                    sim_config,
-                )
-                for gt in groundtruths
-            ],
+            param_space,
         )

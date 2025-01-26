@@ -116,6 +116,10 @@ class FeatureEffect:
     def __rtruediv__(self, other: Union["FeatureEffect", float, int]) -> "FeatureEffect":
         return self._apply_operation(other, lambda x, y: y / x)
 
+    def mean(self) -> Dict[str, float]:
+        """Aggregate the feature effects into one number per feature by taking the mean."""
+        return {feature: np.mean(self.features[feature]["effect"]) for feature in self.features}
+
     def to_list(self) -> List[Dict]:
         """Convert back to list of dictionaries format."""
         return [
@@ -538,7 +542,7 @@ def compute_feature_effect_metrics(estimates: List[FeatureEffect], groundtruth: 
         metrics["Variance"] = sd if "Variance" not in metrics else metrics["Variance"] + sd
 
     metrics["MSE"] /= len(estimates)
-    metrics["Variance"] /= len(estimates)
+    metrics["Variance"] /= len(estimates) - 1
     metrics["Bias^2"] = (mean_estimate - groundtruth) ** 2
 
     return metrics
