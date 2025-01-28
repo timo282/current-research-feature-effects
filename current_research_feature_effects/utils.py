@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 import logging
+import warnings
 from typing import Dict, List, Literal
 from pathlib import Path
 from dataclasses import dataclass
@@ -8,6 +9,9 @@ from joblib import dump
 import os
 import shutil
 import yaml
+import multiprocessing
+from logging.handlers import QueueHandler, QueueListener
+import sys
 import numpy as np
 import pandas as pd
 from sqlalchemy import Engine
@@ -165,8 +169,6 @@ def save_model_results(model_metrics: Dict[str, float], conn: Engine, params: Si
         if_exists="append",
     )
 
-    logging.info(f"Saved model results for {params.model_name} {params.n_train} simulation {sim_no + 1}.")
-
 
 def save_fe_aggregated_results(
     res_agg: Dict[str, Dict[str, Dict]],
@@ -227,10 +229,53 @@ def save_fe_results(fe_metrics: Dict, params: SimulationParameter, type: Literal
     type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
         Type of feature effect.
     """
-    os.mkdir(Path(str(params.groundtruth)) / "results" / params.model_name, exist_ok=True)
+    os.makedirs(Path(str(params.groundtruth)) / "results" / params.model_name, exist_ok=True)
     dump(
         fe_metrics,
         Path(str(params.groundtruth)) / "results" / params.model_name / f"{type}_metrics_{params.n_train}.joblib",
     )
 
     logging.info(f"Saved {type} results for {params.model_name} {params.n_train}.")
+
+
+def _warning_to_logger(message, category, filename, lineno, file=None, line=None):
+    # Convert warnings to logging messages
+    logging.warning(f"{category.__name__} at {filename} - {lineno}: {message}")
+
+
+def setup_logger(log_dir: Path = Path("logs")):
+    # Create a queue for passing logging messages between processes
+    queue = multiprocessing.Queue()
+
+    log_dir.mkdir(exist_ok=True)
+
+    # Create file handler
+    file_handler = logging.FileHandler(log_dir / "experiment_logs.log")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(processName)s - %(levelname)s - %(message)s"))
+
+    # Create console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(asctime)s - %(processName)s - %(levelname)s - %(message)s"))
+
+    # Configure root logger
+    logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
+
+    # Create a listener that will handle logs from the queue
+    listener = QueueListener(queue, file_handler, console_handler)
+    listener.start()
+
+    # Redirect warnings to logging
+    warnings.showwarning = _warning_to_logger
+
+    return queue, listener
+
+
+def configure_worker_logger(queue):
+    # Configure logging for worker processes
+    logger = logging.getLogger()
+    logger.handlers = []  # Remove any existing handlers
+    logger.addHandler(QueueHandler(queue))
+    logger.setLevel(logging.INFO)
+    warnings.showwarning = _warning_to_logger

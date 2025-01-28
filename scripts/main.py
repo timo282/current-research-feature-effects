@@ -15,6 +15,8 @@ from current_research_feature_effects.model_eval import eval_model, empty_dict
 from current_research_feature_effects.utils import (
     create_parameter_space,
     create_and_set_sim_dir,
+    setup_logger,
+    configure_worker_logger,
     save_model_results,
     save_fe_aggregated_results,
     save_fe_results,
@@ -35,7 +37,7 @@ def simulate(
     logging.info(f"Starting simulation with parameters: {params.groundtruth}, {params.model_name}, {params.n_train}")
 
     # create directories
-    os.mkdir(str(params.groundtruth), exist_ok=True)
+    os.makedirs(str(params.groundtruth), exist_ok=True)
     os.makedirs(Path(str(params.groundtruth)) / "results", exist_ok=True)
 
     # create databases for results
@@ -104,7 +106,7 @@ def simulate(
 
         # initialize model
         model = initialize_model(
-            params.model_config["model"],
+            params.model_config,
             params.model_name,
             params.groundtruth,
             params.n_train,
@@ -166,8 +168,8 @@ def simulate(
     }
 
     # save metrics
-    save_fe_results(pdp_metrics, engine_effects_results, params, "pdp")
-    save_fe_results(ale_metrics, engine_effects_results, params, "ale")
+    save_fe_results(pdp_metrics, params, "pdp")
+    save_fe_results(ale_metrics, params, "ale")
 
     # aggregate metrics
     pdp_metrics_agg = {
@@ -185,13 +187,13 @@ def simulate(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", type=str, required=True, help="Path to config.ini file")
     args = parser.parse_args()
     sim_config = ConfigParser()
     sim_config.read(Path(args.config))
+
+    log_queue, log_listener = setup_logger(Path(sim_config.get("storage", "log_dir")))
 
     param_space = create_parameter_space(sim_config)
     logging.info(f"Created parameter space with {len(param_space)} simulation parameters.")
@@ -200,8 +202,10 @@ if __name__ == "__main__":
 
     num_processes = min(len(param_space), cpu_count())
 
-    with Pool(processes=num_processes) as pool:
-        pool.starmap(
+    with Pool(processes=num_processes, initializer=configure_worker_logger, initargs=(log_queue,)) as pool:
+        pool.map(
             simulate,
             param_space,
         )
+
+    log_listener.stop()

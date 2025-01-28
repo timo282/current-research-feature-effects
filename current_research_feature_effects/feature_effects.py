@@ -204,8 +204,8 @@ def _accumulated_local_effects(
     X1[feature] = [bins[i] for i in bin_codes]
     X2[feature] = [bins[i + 1] for i in bin_codes]
     try:
-        y_1 = estimator.predict(X1).ravel()
-        y_2 = estimator.predict(X2).ravel()
+        y_1 = estimator.predict(X1.to_numpy()).ravel()
+        y_2 = estimator.predict(X2.to_numpy()).ravel()
     except Exception:
         raise Exception("Please check that your model is fitted, and accepts X as input.")
 
