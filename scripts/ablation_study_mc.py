@@ -6,7 +6,6 @@ import os
 import shutil
 from joblib import dump
 from pathlib import Path
-from collections import defaultdict
 from multiprocessing import Pool, cpu_count
 import numpy as np
 
@@ -43,9 +42,8 @@ def perform_mc_ablation_study(groundtruth: Groundtruth, study_params: Dict):
     results = {"pdp": {}, "ale": {}}
 
     for n_samples in study_params["n_samples"]:
-        pdp_variances = defaultdict(float)
-        ale_variances = defaultdict(float)
-
+        pdp_variances = None
+        ale_variances = None
         for i in range(study_params["k"]):
             # generate data for MC integration
             X_mc, *_ = generate_data(
@@ -71,32 +69,21 @@ def perform_mc_ablation_study(groundtruth: Groundtruth, study_params: Dict):
             )
 
             # compute point-wise squared errors
-            pdp_vars = {
-                feature: (pdp[i]["effect"] - pdp_groundtruth_theoretical[i]["effect"]) ** 2
-                for i, feature in enumerate(feature_names)
-            }
-            ale_vars = {
-                feature: (ale[i]["effect"] - ale_groundtruth_theoretical[i]["effect"]) ** 2
-                for i, feature in enumerate(feature_names)
-            }
+            pdp_sq_err = (pdp - pdp_groundtruth_theoretical) ** 2
+            ale_sq_err = (ale - ale_groundtruth_theoretical) ** 2
 
             # accumulate point-wise squared errors
-            for feature in feature_names:
-                pdp_variances[feature] += pdp_vars[feature]
-                ale_variances[feature] += ale_vars[feature]
+            pdp_variances = pdp_sq_err if pdp_variances is None else pdp_variances + pdp_sq_err
+            ale_variances = ale_sq_err if ale_variances is None else ale_variances + ale_sq_err
 
         # average point-wise squared errors to get the variance of the effect estimates
-        results["pdp"][n_samples] = {k: v / study_params["k"] for k, v in pdp_variances.items()}
-        results["ale"][n_samples] = {k: v / study_params["k"] for k, v in ale_variances.items()}
+        results["pdp"][n_samples] = pdp_variances / study_params["k"]
+        results["ale"][n_samples] = ale_variances / study_params["k"]
 
-    # save results, groundtruth and grid values
+    # save results and groundtruth
     os.makedirs(Path(str(groundtruth)), exist_ok=True)
     dump(results, Path(str(groundtruth)) / "ablation_results.joblib")
     dump(groundtruth, Path(str(groundtruth)) / "groundtruth.joblib")
-    if study_params["remove_first_last"]:
-        dump([grid[1:-1] for grid in grid_values], Path(str(groundtruth)) / "grid_values.joblib")
-    else:
-        dump(grid_values, Path(str(groundtruth)) / "grid_values.joblib")
 
 
 if __name__ == "__main__":
