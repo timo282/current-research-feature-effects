@@ -11,6 +11,7 @@ import seaborn as sns
 from sklearn.base import BaseEstimator
 from scipy.stats import pearsonr, spearmanr
 
+from current_research_feature_effects.feature_effects import FeatureEffect
 from current_research_feature_effects.plotting.utils import (
     set_style,
     get_boxplot_style,
@@ -282,9 +283,7 @@ def plot_correlation_analysis(
 
 
 def plot_mcvariance_over_features(
-    mc_variance_data: Dict,
-    grid_values: List[np.ndarray],
-    n_samples: np.ndarray,
+    mc_variance_data: Dict[float, FeatureEffect],
     feature_names: List[str],
     title: Optional[str] = None,
     sharey: bool = False,
@@ -302,11 +301,6 @@ def plot_mcvariance_over_features(
     mc_variance_data : Dict
         A dictionary containing the Monte Carlo variance data for different sample sizes
         and features.
-    grid_values : List[np.ndarray]
-        A list of numpy arrays containing the grid values for each feature used to compute
-        the variances.
-    n_samples : np.ndarray
-        An array of sample sizes used to compute the Monte Carlo variances.
     feature_names : List[str]
         A list of feature names to plot.
     title : str, optional
@@ -322,13 +316,23 @@ def plot_mcvariance_over_features(
     fig, axes = plt.subplots(1, n_feat, figsize=(4 * n_feat, 4), sharey=sharey)
     fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
 
-    for f_idx, feature, ax in zip(range(n_feat), feature_names, axes):
+    for feature, ax in zip(feature_names, axes):
+        n_samples = list(mc_variance_data.keys())
         norm = colors.LogNorm(vmin=min(n_samples), vmax=max(n_samples))
         cmap = cm.viridis
         for n in n_samples:
             color = cmap(norm(n))
-            ax.plot(grid_values[f_idx], mc_variance_data[n][feature], color=color)
-            ax.fill_between(grid_values[f_idx], mc_variance_data[n][feature], alpha=0.1, color=color)
+            ax.plot(
+                mc_variance_data[n].features[feature]["grid"],
+                mc_variance_data[n].features[feature]["effect"],
+                color=color,
+            )
+            ax.fill_between(
+                mc_variance_data[n].features[feature]["grid"],
+                mc_variance_data[n].features[feature]["effect"],
+                alpha=0.1,
+                color=color,
+            )
         ax.set_title(f"MC Variance ${feature}$")
         ax.set_xlabel(feature)
         ax.set_ylabel("MC Variance")
@@ -340,8 +344,7 @@ def plot_mcvariance_over_features(
 
 
 def plot_mcvariance_mean(
-    mc_variance_data: Dict,
-    n_samples: np.ndarray,
+    mc_variance_data: Dict[float, FeatureEffect],
     feature_names: List[str],
     title: Optional[str] = None,
     sharey: bool = False,
@@ -360,8 +363,6 @@ def plot_mcvariance_mean(
     mc_variance_data : Dict
         A dictionary containing the Monte Carlo variance data for different sample sizes
         and features.
-    n_samples : np.ndarray
-        An array of sample sizes used to compute the Monte Carlo variances.
     feature_names : List[str]
         A list of feature names to plot.
     title : str, optional
@@ -390,9 +391,9 @@ def plot_mcvariance_mean(
 
     for feature, ax in zip(feature_names, axes):
         means = []
-        for n in n_samples:
-            means.append(np.mean(mc_variance_data[n][feature]))
-        ax.plot(n_samples, means, marker="+")
+        for k in mc_variance_data.keys():
+            means.append(np.mean(mc_variance_data[k].features[feature]["effect"]))
+        ax.plot(mc_variance_data.keys(), means, marker="+")
         ax.set_yscale(yscale)
         ax.set_xscale(xscale)
         ax.set_title(f"Mean MC Variance ${feature}$")
