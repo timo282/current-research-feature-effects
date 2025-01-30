@@ -102,7 +102,7 @@ def initialize_model(
         tuning_studies_dir = config.get("storage", "tuning_studies_folder")
         os.makedirs(Path(os.getcwd()) / str(groundtruth) / tuning_studies_dir, exist_ok=True)
         study_name = f"{model_str}_{n_train}_{int(snr)}"
-        storage_name = f"sqlite:///{str(groundtruth)}/{tuning_studies_dir}/{model_str}.db"
+        storage_name = f"sqlite:///{str(groundtruth)}/{tuning_studies_dir}/{model_str}_{n_train}_{int(snr)}.db"
         try:
             model_params = optuna.load_study(
                 study_name=study_name,
