@@ -4,10 +4,12 @@ from typing_extensions import Dict, Literal, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 # from matplotlib import transforms
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 import seaborn as sns
+
 # from sklearn.base import BaseEstimator
 # from scipy.stats import pearsonr, spearmanr
 
@@ -18,6 +20,7 @@ from current_research_feature_effects.plotting.utils import (
     get_boxplot_style,
     get_feature_effect_plot_style,
 )
+
 # from current_research_feature_effects.feature_effects import compute_pdps, compute_ales
 
 
@@ -347,6 +350,35 @@ def boxplot_model_results(
 #         return g, pd.DataFrame(correlation_results)
 
 #     return g
+
+
+def plot_feature_effect_error_table(df: pd.DataFrame, models: List[str], type: Literal["pdp", "ale"]):
+    """
+    Plot a table of feature effect errors for different models.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing the aggregated feature effect errors.
+    models : List[str]
+        List of model names.
+    type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
+        Type of feature effect, either 'pdp' or 'ale'.
+    """
+    for model in models:
+        g = sns.FacetGrid(
+            df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=1.5
+        )
+
+        g.map_dataframe(
+            sns.barplot, x="split", y="value", hue="metric", hue_order=["MSE", "Bias^2", "Variance"], palette="Set2"
+        )
+
+        g.add_legend(loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=3)
+        g.fig.suptitle(f"Feature Effect Errors {type.upper()} {model}", y=1.02)
+        plt.tight_layout()
+
+    plt.show()
 
 
 def plot_mcvariance_over_features(
