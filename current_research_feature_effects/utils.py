@@ -12,6 +12,7 @@ import yaml
 import multiprocessing
 from logging.handlers import QueueHandler, QueueListener
 import sys
+from time import sleep
 import numpy as np
 import pandas as pd
 from sqlalchemy import Engine
@@ -138,7 +139,14 @@ def create_and_set_sim_dir(sim_config: ConfigParser, config_path: Path) -> None:
         raise ValueError(f"Simulation {base_dir} already exists.")
 
 
-def save_model_results(model_metrics: Dict[str, float], conn: Engine, params: SimulationParameter, sim_no: int):
+def save_model_results(
+    model_metrics: Dict[str, float],
+    conn: Engine,
+    params: SimulationParameter,
+    sim_no: int,
+    max_retries: int = 10,
+    retry_delay: float = 0.1,
+) -> bool:
     """
     Save model results to database.
 
@@ -152,6 +160,15 @@ def save_model_results(model_metrics: Dict[str, float], conn: Engine, params: Si
         Simulation parameters.
     sim_no : int
         Simulation number.
+    max_retries : int, optional
+        Maximum number of retries, by default 10
+    retry_delay : float, optional
+        Delay between retries, by default 0.1
+
+    Returns
+    -------
+    bool
+        True if results were saved successfully.
     """
     df_model_result = pd.DataFrame(
         {
@@ -163,11 +180,18 @@ def save_model_results(model_metrics: Dict[str, float], conn: Engine, params: Si
         | model_metrics
     )
 
-    df_model_result.to_sql(
-        "model_results",
-        con=conn,
-        if_exists="append",
-    )
+    for attempt in range(max_retries):
+        try:
+            df_model_result.to_sql(
+                "model_results",
+                con=conn,
+                if_exists="append",
+            )
+            return True
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise Exception(f"Failed to save results after {max_retries} attempts: {e}")
+            sleep(retry_delay * (2**attempt))  # Exponential backoff
 
 
 def save_fe_aggregated_results(
