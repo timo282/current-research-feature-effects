@@ -3,7 +3,11 @@
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+\usepackage{booktabs} 
 \usepackage{svg}
 \usepackage[misc]{ifsym}
 \newcommand{\corr}{(\Letter)}
@@ -13,9 +17,10 @@
 
 \begin{document}
 
-\title{Should We Compute Feature Effects on Training or Validation Data?}
+\title{Understanding Implications of Dataset Choice for Feature Effect Estimation:
+    A Simulation-Based Investigation through Error Decomposition}
 
-% \titlerunning{Should We Compute Feature Effects on Training or Validation Data?}
+\titlerunning{Understanding Implications of Dataset Choice for Feature Effect Estimation}
 % If the full title of your paper is short enough to also fit in the running head, you can omit the abbreviated paper title here. You can check as follows: if you comment out the \titlerunning line, something will appear in the header of all odd-numbered pages of your PDF from page 3 onward. This something is either the full title (in which case all is well), or the error message "Title Suppressed Due to Excessive Length". If this error message appears, you're going to want to provide an abbreviated title within the \titlerunning command, because if you won't do it, Springer will do it for you.
 
 %N.B.: Author information (both in the \author{} and \authorrunning{} command) should only be present in the Camera-Ready Version of your paper. The version that you initially submit for review, ought to be double-blind. So, when initially submitting your paper, use:
@@ -330,7 +335,7 @@ distribution $F$. Similarly, one could use the estimate $\widehat{PDP}_{f,S}$
 as groundtruth, introducing an additional variance term $Var_{X_{mc2}}$when
 estimated on different MC sample (proof in
 \textsc{Appendix~\ref{app:proof-mc-variance}}).
-An overview of all error terms in this chian can be found in
+An overview of all error terms in this chain can be found in
 \textbf{Fig.\@~\ref{fig:error-graph}}.\\
 
 \begin{figure}[t]
@@ -361,7 +366,7 @@ MC integration. To estimate the MC variance, we propose the following estimators
     \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))^2
 \end{equation}
 
-and
+\noindent and
 \begin{equation}
     \begin{split}
         \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
@@ -479,27 +484,74 @@ well as the relevance to real-world applications in the domain of interest.
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
+\paragraph{Datasets.}
+Building upon \textsc{Section~\ref{sec:test-functions}}, we employ three
+distinct datasets of varying complexity for our simulation study:
+
+\begin{itemize}[label=--]
+    \item \textbf{SimpleNormalCorrelated} consists of four
+          standard-normally distributed features, where the first two
+          features exhibit strong correlation ($\rho = 0.9$) while the others are
+          independent dummy variables. The target variable is given by this simple
+          formula:
+          \begin{equation}
+              f_1(\boldsymbol{x}) = x_1 + \frac{x_2^2}{2} + x_1 x_2
+          \end{equation}
+          This test function is inspired by~\cite{liu_model_2018} and aims
+          to focus on the impact of correlation and interactions.
+    \item \textbf{Friedman1} implements the classical Friedman1 benchmark
+          function~\cite{breiman_bagging_1996,friedman_multivariate_1991}
+          with seven uniformly distributed features between 0 and 1, all mutually
+          independent:
+          \begin{equation}
+              f_2(\boldsymbol{x}) = 10 \sin(\pi x_1 x_2) + 20(x_3 - \frac{1}{2})^2 + 10 x_4 + 5 x_5
+          \end{equation}
+          This dataset includes a mix of linear and different non-linear effects with
+          interactions.
+    \item \textbf{Feynman I.29.16} is based on the Feynman equation I.29.16
+          describing wave interference, comprising six independent features. Using
+          the refined sampling strategies from Matsubara et al. \cite{matsubara_rethinking_2024},
+          two log-uniformly distributed variables on $[0.1, 10]$, two angles uniformly
+          distributed over $[0, 2\pi]$, and two uniformly distributed dummy variables on [0,1]:
+          \begin{equation}
+              f_3(\boldsymbol{x}) = \sqrt{x_1^2 + x_2^2 + 2 x_1 x_2 \cos(\theta_1 - \theta_2)}
+          \end{equation}
+          This dataset is designed to reflect a physics-based relationship for more real-world relevance.
+
+\end{itemize}
+
+\noindent To generate the datasets, a standard normally distributed noise term $\epsilon$ is added to each function,
+scaled by a signal-to-noise ratio of five\footnote{To determine the factor by which the noise is multiplied,
+    the standard deviation of the signal is computed over 100'000 randomly drawn samples of $y$ and divided by
+    the signal-to-noise ratio of five.}. For each test function, we consider two dataset sizes:
+$(n_{train}=1000, n_{val}=250)$ and $(n_{train}=8000, n_{val}=2000)$.
+
+\paragraph{Model Inducers.}
+We consider the following model inducers for our simulation study:
+\begin{itemize}[label=--]
+    \item \textbf{LinReg}: a simple linear regression model as baseline.
+    \item \textbf{GAM\_OT}: a Generalized Additive Model (GAM) with spline terms
+          and tensor splines for first-order interactions, number of splines
+          and penalization optimally tuned.
+    \item \textbf{GAM\_OT}: as above, but with hyperparameters chosen to overfit.
+    \item \textbf{SVM\_OT}: a Support Vector Machine (SVM) with optimally tuned hyperparameters.
+    \item \textbf{SVM\_OF}: a Support Vector Machine (SVM) with hyperparameters chosen to overfit.
+    \item \textbf{XGBoost\_OT}: an XGBoost model with optimally tuned hyperparameters.
+    \item \textbf{XGBoost\_OF}: an XGBoost model with hyperparameters chosen to overfit.
+\end{itemize}
+
+\noindent Hyperparameters are pre-selected, i.e.\ carefully hand-picked for overfitting scenarios
+and tuned on a different sample for optimal tuning. Details on the hyperparameters and the
+performance of the models can be found in \textsc{Appendix~\ref{app:model-hps-perf}}.
+
 \section{Results}\label{sec:results}
 
-\section{Discussion}\label{sec:discussion}
+\section{Conclusions}\label{sec:conclusion}
 
-\section{Conclusion}\label{sec:conclusion}
+\subsection{Summary \& Discussion}
 
-% \begin{table}[t]
-% \caption{Table captions should be placed above the
-% tables.}\label{tab1}
-% \begin{tabular}{lll}
-% \toprule
-% Heading level &  Example & Font size and style\\
-% \midrule
-% Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
-% 1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
-% 2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
-% 3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
-% 4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
-% \bottomrule
-% \end{tabular}
-% \end{table}
+\subsection{Limitations \& Future Work}
+
 
 \begin{credits}
     \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is used for
@@ -535,5 +587,104 @@ well as the relevance to real-world applications in the domain of interest.
     \noindent Again we use $\mathbb{E}_X[\widehat{PDP}_{f}] = PDP_{f}$ (cf.~\cite{molnar_relating_2023}) as well as the fact
     that all quantities based on $f$ do not depend on the model distribution $F$.
 \end{proof}
+
+\section{Model Hyperparameters and Performance}\label{app:model-hps-perf}
+In this appendix, we give details on the models used in the simulation study.
+Specifically, we provide details on the hyperparameter selection and the
+finally used hyperparameters, as well as the performance of the models.
+
+\subsection{Hyperparameters}
+
+An overview of all hyperparameters used for the different models can be found
+in \textbf{Table~\ref{tab:model-hyperparameters}}. Note that the linear
+regression is excluded as we do not have any hyperparameters to tune.
+
+Hyperparameters for the overfitting models (OF) were carefully hand-picked to
+achieve strong performance on the training data while performing relatively
+poorly on the validation data.
+
+The optimal hyperparameters (OT) were chosen by tuning the models on a separate
+data sample. Training and validation data were sampled independently from the
+correspondings DGPs, with a training size of $n_{train}$ and a validation size
+of 10000 to get a reliable performance estimate. While this scenario is
+unrealistic in practice, it allows as to consider hyperparameters as
+``pre-selected'' and avoid costly nested resampling strategies for the
+simulation study. Each model was tuned for 200 trials using a
+\textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra_algorithms_2011}
+using validation MSE as objective to minimize (equivalent to maximizing
+R2-score).
+
+\begin{table}
+    \scriptsize
+    \begin{tabularx}{\textwidth}{>{\RaggedRight\arraybackslash}m{1.6cm}p{1.225cm}p{2.05cm}>{\RaggedRight\arraybackslash}X}
+        \toprule
+        \textbf{Dataset}                        & \textbf{n\_train}                 & \textbf{Model}       & \textbf{Hyperparameters}                                                                                                                                                                          \\
+        \midrule
+        \multirow[t]{14}{=}{\textbf{Simple                                                                                                                                                                                                                                                                     \\Normal\\Correlated}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF} & n\_bases: 50; lam: 0.0005;  \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 20; lam: 15.6807;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 800; gamma: 10;                                                                                                                                                                                \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 917.9061; gamma: 0.0030;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1200; max\_depth: 16; learning\_rate: 0.35; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                           \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 1640; max\_depth: 5; learning\_rate: 0.0062; subsample: 0.5601; min\_child\_weight: 1.6999; colsample\_bytree: 0.7632; colsample\_bylevel: 0.6944; lambda: 0.0156; alpha: 0.0660;  \\
+        \cline{2-4}
+        \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 64; lam: 1e-05;                                                                                                                                                                         \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 5; lam: 0.0010;                                                                                                                                                                         \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 10;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 864.4724; gamma: 0.0085;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1500; max\_depth: 18; learning\_rate: 0.4000; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                         \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 2586; max\_depth: 5; learning\_rate: 0.0044; subsample: 0.9484; min\_child\_weight: 1.4257; colsample\_bytree: 0.8471; colsample\_bylevel: 0.8672; lambda: 5.1002; alpha: 0.0026;  \\
+        \cline{1-4}
+        \multirow[t]{14}{=}{\textbf{Friedman1}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF}     & n\_bases: 50; lam: 0.0001;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 21; lam: 0.0402;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 15;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 917.1949; gamma: 0.2102;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 2621; max\_depth: 8; learning\_rate: 0.0335; subsample: 0.6192; min\_child\_weight: 5.4066; colsample\_bytree: 0.7651; colsample\_bylevel: 0.5224; lambda: 11.6021; alpha: 4.5342; \\
+        \cline{2-4}
+        \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 80; lam: 1e-08;                                                                                                                                                                         \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 22; lam: 0.0657;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 18;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 901.1903; gamma: 0.2602;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1200; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 3691; max\_depth: 5; learning\_rate: 0.0070; subsample: 0.6643; min\_child\_weight: 1.4075; colsample\_bytree: 0.8403; colsample\_bylevel: 0.8186; lambda: 0.0399; alpha: 5.0734;  \\
+        \cline{1-4}
+        \multirow[t]{14}{=}{\textbf{Feynman                                                                                                                                                                                                                                                                    \\I.29.16}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF} & n\_bases: 50; lam: 0.0001;  \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 31; lam: 0.3260;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 200; gamma: 8;                                                                                                                                                                                 \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 11.4317; gamma: 0.1394;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 4246; max\_depth: 9; learning\_rate: 0.0327; subsample: 0.8004; min\_child\_weight: 6.3792; colsample\_bytree: 0.8420; colsample\_bylevel: 0.8357; lambda: 14.1131; alpha: 6.0556; \\
+        \cline{2-4}
+        \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 64; lam: 5e-07;                                                                                                                                                                         \\
+        \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 32; lam: 0.4500;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 400; gamma: 10;                                                                                                                                                                                \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 22.5167; gamma: 0.1114;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
+        \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 3962; max\_depth: 7; learning\_rate: 0.0372; subsample: 0.9351; min\_child\_weight: 4.0962; colsample\_bytree: 0.8640; colsample\_bylevel: 0.7728; lambda: 29.2036; alpha: 5.1631; \\
+        \bottomrule
+    \end{tabularx}
+    \caption{Hyperparameters for the models used in the simulation study}
+    \label{tab:model-hyperparameters}
+\end{table}
+
+\subsection{Model Performance Evaluation}
+
+To ensure that the models perform as expected, we evaluate their performance
+both on the training data and a holdout test data with the latter consisting
+of 10000 samples to get a reliable performance estimate. The performances
+evaluated over the 30 repetitions are aggregated in \textbf{Fig.~\ref{fig:model-performance}}
+showing the R2-scores. As intended, the overfitting models perform better on
+the training data than the optimally tuned models, while being outperformed on
+the holdout test data and also exhibiting higher variance in their generalization
+performance. Note that the linear regression model serves only as a baseline. The
+overfitted SVM (SVM\_OF) show substantially worse performances on test data compared
+to the other models. Therefore, we excluded it from further analysis.
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{img/model_performances.png}
+    \caption{Performance of the models on training (left) and holdout test data (right), each boxplot aggregates 30 repetitions}
+    \label{fig:model-performance}
+\end{figure}
+
 
 \end{document}
