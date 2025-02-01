@@ -1,4 +1,4 @@
-from typing_extensions import List, Dict, Callable, Tuple, Literal, Union
+from typing_extensions import List, Dict, Callable, Literal, Union
 from copy import deepcopy
 from dataclasses import dataclass
 import pandas as pd
@@ -230,43 +230,43 @@ def _accumulated_local_effects(
     return res_df
 
 
-def get_modified_grids(
-    base_grids: List[np.ndarray], Xs: List[np.ndarray], feature_names: List[str]
-) -> Tuple[np.ndarray]:
-    """
-    Get modified grids based on the minimum and maximum values of the datasets.
+# def get_modified_grids(
+#     base_grids: List[np.ndarray], Xs: List[np.ndarray], feature_names: List[str]
+# ) -> Tuple[np.ndarray]:
+#     """
+#     Get modified grids based on the minimum and maximum values of the datasets.
 
-    Parameters
-    ----------
-    base_grids : List[np.ndarray]
-        List of base grids to be modified.
-    Xs : List[np.ndarray]
-        List of datasets to compute the minimum and maximum values from.
-    feature_names : List[str]
-        Names of features to compute the minimum and maximum values from.
+#     Parameters
+#     ----------
+#     base_grids : List[np.ndarray]
+#         List of base grids to be modified.
+#     Xs : List[np.ndarray]
+#         List of datasets to compute the minimum and maximum values from.
+#     feature_names : List[str]
+#         Names of features to compute the minimum and maximum values from.
 
-    Returns
-    -------
-    Tuple[np.ndarray]
-        Tuple of modified grids based on the minimum and maximum values of the datasets,
-        length of the tuple is equal to the number of datasets.
-    """
-    mins = np.array([[np.min(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
-    maxs = np.array([[np.max(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
+#     Returns
+#     -------
+#     Tuple[np.ndarray]
+#         Tuple of modified grids based on the minimum and maximum values of the datasets,
+#         length of the tuple is equal to the number of datasets.
+#     """
+#     mins = np.array([[np.min(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
+#     maxs = np.array([[np.max(X[:, i]) for i in range(X.shape[1])] for X in Xs]).T
 
-    common_mins = mins.max(axis=1)
-    common_maxs = maxs.min(axis=1)
+#     common_mins = mins.max(axis=1)
+#     common_maxs = maxs.min(axis=1)
 
-    dataset_grids = [[] for _ in range(len(Xs))]
-    for i in range(len(feature_names)):
-        base_grid = base_grids[i]
-        filtered_grid = base_grid[(base_grid > common_mins[i]) & (base_grid < common_maxs[i])]
+#     dataset_grids = [[] for _ in range(len(Xs))]
+#     for i in range(len(feature_names)):
+#         base_grid = base_grids[i]
+#         filtered_grid = base_grid[(base_grid > common_mins[i]) & (base_grid < common_maxs[i])]
 
-        for j in range(len(Xs)):
-            specific_grid = np.concatenate([[mins[i, j]], filtered_grid, [maxs[i, j]]])
-            dataset_grids[j].append(specific_grid)
+#         for j in range(len(Xs)):
+#             specific_grid = np.concatenate([[mins[i, j]], filtered_grid, [maxs[i, j]]])
+#             dataset_grids[j].append(specific_grid)
 
-    return tuple(dataset_grids)
+#     return tuple(dataset_grids)
 
 
 def compute_pdps(
@@ -457,6 +457,7 @@ def compute_cv_feature_effect(
     effect_fn: Callable,
     center_curves: bool = False,
     remove_first_last: bool = False,
+    return_models: bool = False,
 ) -> FeatureEffect:
     """
     Compute feature effects using cross-validation.
@@ -486,6 +487,8 @@ def compute_cv_feature_effect(
         Whether to center the effect curves around zero.
     remove_first_last : bool, default=False
         Whether to remove first and last grid points from effects.
+    return_models : bool, default=False
+        Whether to return the fitted models for each fold.
 
     Returns
     -------
@@ -498,6 +501,7 @@ def compute_cv_feature_effect(
         If grid points are not consistent across folds for any feature.
     """
     effects = []
+    models = []
     for (train_index, test_index), cv_grid in zip(cv.split(X=X, y=y), cv_grids):
         X_train, X_val = X[train_index], X[test_index]
         y_train, _ = y[train_index], y[test_index]
@@ -505,12 +509,16 @@ def compute_cv_feature_effect(
         model_fold.fit(X_train, y_train)
         effect_fold = effect_fn(model_fold, X_val, feature_names, cv_grid, center_curves, remove_first_last)
         effects.append(effect_fold)
+        models.append(model_fold)
 
     averaged_effects = effects[0]
     for effect in effects[1:]:
         averaged_effects += effect
 
     averaged_effects /= len(effects)
+
+    if return_models:
+        return averaged_effects, [model_fold for model_fold in models]
 
     return averaged_effects
 
@@ -546,3 +554,25 @@ def compute_feature_effect_metrics(estimates: List[FeatureEffect], groundtruth: 
     metrics["Bias^2"] = (mean_estimate - groundtruth) ** 2
 
     return metrics
+
+
+def compute_estimator_mc_variances(estimates: List[FeatureEffect], M: int, K: int) -> FeatureEffect:
+    """
+    Compute Monte Carlo variances of feature effect estimates.
+
+    Parameters
+    ----------
+    estimates : List[FeatureEffect]
+        List of feature effect estimates.
+    M : int
+        Number of model refits.
+    K : int
+        Number of Monte Carlo simulations.
+
+    Returns
+    -------
+    FeatureEffect
+        Object containing the computed Monte Carlo variances.
+    """
+    mean_estimate = sum(estimates) / len(estimates)
+    return sum((estimate - mean_estimate) ** 2 for estimate in estimates) / (M * (K - 1))
