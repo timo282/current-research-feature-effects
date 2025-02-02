@@ -556,23 +556,19 @@ def compute_feature_effect_metrics(estimates: List[FeatureEffect], groundtruth: 
     return metrics
 
 
-def compute_estimator_mc_variances(estimates: List[FeatureEffect], M: int, K: int) -> FeatureEffect:
+def compute_variance(estimates: List[FeatureEffect]) -> FeatureEffect:
     """
-    Compute Monte Carlo variances of feature effect estimates.
+    Compute variance of feature effect estimates.
 
     Parameters
     ----------
     estimates : List[FeatureEffect]
         List of feature effect estimates.
-    M : int
-        Number of model refits.
-    K : int
-        Number of Monte Carlo simulations.
 
     Returns
     -------
     FeatureEffect
-        Object containing the computed Monte Carlo variances.
+        Feature effect object containing the computed variance.
     """
     mean_estimate = sum(estimates) / len(estimates)
-    return sum((estimate - mean_estimate) ** 2 for estimate in estimates) / (M * (K - 1))
+    return sum((estimate - mean_estimate) ** 2 for estimate in estimates) / (len(estimates) - 1)

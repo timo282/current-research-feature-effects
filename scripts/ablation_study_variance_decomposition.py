@@ -25,7 +25,7 @@ from current_research_feature_effects.feature_effects import (
     compute_pdps,
     compute_ales,
     compute_cv_feature_effect,
-    compute_estimator_mc_variances,
+    compute_variance,
 )
 
 
@@ -52,8 +52,8 @@ def simulate(
     remove_first_last = params.config["feature_effects"].getboolean("remove_first_last")
     k_cv = params.config.getint("simulation_metadata", "k_cv")
 
-    pdps = {}
-    ales = {}
+    pdp_variances = {}
+    ale_variances = {}
 
     K = params.config.getint("simulation_metadata", "n_datasets")
     M = params.config.getint("simulation_params", "n_sim")
@@ -100,6 +100,8 @@ def simulate(
             models.append(model_fold)
 
         # compute feature effects on K different MC datasets
+        pdps = {}
+        ales = {}
         for k in range(K):
             # sample new dataset
             X_train, y_train, X_val, y_val = generate_data(
@@ -154,14 +156,26 @@ def simulate(
                 pdps[split] = [pdp] if split not in pdps else pdps[split] + [pdp]
                 ales[split] = [ale] if split not in ales else ales[split] + [ale]
 
-    # compute MC variances
+        # compute variance per dataset
+        for split in ["train", "val", "cv"]:
+            pdp_variances[split] = (
+                [compute_variance(pdps[split])]
+                if split not in pdp_variances
+                else pdp_variances[split] + [compute_variance(pdps[split])]
+            )
+            ale_variances[split] = (
+                [compute_variance(ales[split])]
+                if split not in ale_variances
+                else ale_variances[split] + [compute_variance(ales[split])]
+            )
+
+    # average over simulations
     pdp_metrics = {
-        split: {"MC Variance": compute_estimator_mc_variances(pdps_split, M=M, K=K)}
-        for split, pdps_split in pdps.items()
+        split: {"MC Variance": sum(pdp_variances[split]) / len(pdp_variances[split])} for split in pdp_variances.keys()
     }
+
     ale_metrics = {
-        split: {"MC Variance": compute_estimator_mc_variances(ales_split, M=M, K=K)}
-        for split, ales_split in ales.items()
+        split: {"MC Variance": sum(ale_variances[split]) / len(ale_variances[split])} for split in ale_variances.keys()
     }
 
     # save metrics
