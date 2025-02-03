@@ -349,13 +349,16 @@ multiple models of the same inducer fitted to $M$ different training data
 sets sampled independently from the DGP. We propose the following estimators:
 \begin{equation}
     \widehat{\text{MSE}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
+    \label{eq:mse-estimator}
 \end{equation}
 \begin{equation}
     \widehat{\text{Bias}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = (PDP_{f,S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat{f}^{(m)},S}(x_S))
+    \label{eq:bias-estimator}
 \end{equation}
 \begin{equation}
     \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) =
     \frac{1}{M-1}\sum_{m=1}^M\left(\widehat{PDP}_{\hat f^{(m)},S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat f^{(m)},S}(x_S)\right)^2
+    \label{eq:variance-estimator}
 \end{equation}
 
 \noindent Note that these are similar to the approach in~\cite{molnar_relating_2023},
@@ -484,6 +487,24 @@ well as the relevance to real-world applications in the domain of interest.
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
+To address the research question of which data to choose to estimate feature
+effects, we conduct a comprehensive simulation study. For different models,
+datasets, and dataset sizes, we estimate the feature effects PDP and ALE on
+training data, validation data, and in a cross-validated manner. We then
+compute the feature effect error as MSE with respect to the ground truth
+feature effects and decompose it into bias and variance components. By
+comparing these error terms across the different estimation strategies
+(training, validation, cross-validation), we aim to provide nuanced empirical
+insights into the implications of the data choice on feature effect estimation.
+For deeper analysis, we conduct two ablation studies: one decomposing the
+feature effect variance into model variance and Monte Carlo variance, and
+another examining the impact of the dataset size on the Monte Carlo variance.
+In the following, we describe our experimental set-up for the main simulation
+study (\textsc{Section~\ref{sec:experiment-main}}) and the ablation studies
+(\textsc{Section~\ref{sec:experiment-ablation}}).
+
+\subsection{Main Experiment}\label{sec:experiment-main}
+
 \paragraph{Datasets.}
 Building upon \textsc{Section~\ref{sec:test-functions}}, we employ three
 distinct datasets of varying complexity for our simulation study:
@@ -526,14 +547,16 @@ scaled by a signal-to-noise ratio of five\footnote{To determine the factor by wh
     the signal-to-noise ratio of five.}. For each test function, we consider two dataset sizes:
 $(n_{train}=1000, n_{val}=250)$ and $(n_{train}=8000, n_{val}=2000)$.
 
-\paragraph{Model Inducers.}
-We consider the following model inducers for our simulation study:
+\paragraph{Models.}
+We consider a set of seven complementary learners, spanning different modeling
+paradigms:
+
 \begin{itemize}[label=--]
-    \item \textbf{LinReg}: a simple linear regression model as baseline.
+    \item \textbf{LinReg}: a simple linear regression model as a baseline.
     \item \textbf{GAM\_OT}: a Generalized Additive Model (GAM) with spline terms
           and tensor splines for first-order interactions, number of splines
           and penalization optimally tuned.
-    \item \textbf{GAM\_OT}: as above, but with hyperparameters chosen to overfit.
+    \item \textbf{GAM\_OF}: as above, but with hyperparameters chosen to overfit.
     \item \textbf{SVM\_OT}: a Support Vector Machine (SVM) with optimally tuned hyperparameters.
     \item \textbf{SVM\_OF}: a Support Vector Machine (SVM) with hyperparameters chosen to overfit.
     \item \textbf{XGBoost\_OT}: an XGBoost model with optimally tuned hyperparameters.
@@ -541,8 +564,43 @@ We consider the following model inducers for our simulation study:
 \end{itemize}
 
 \noindent Hyperparameters are pre-selected, i.e.\ carefully hand-picked for overfitting scenarios
-and tuned on a different sample for optimal tuning. Details on the hyperparameters and the
-performance of the models can be found in \textsc{Appendix~\ref{app:model-hps-perf}}.
+and tuned on a different dataset for optimal tuning. Details on the hyperparameters and performances
+of the models can be found in \textsc{Appendix~\ref{app:model-hps-perf}}.
+
+\paragraph{Feature Effect Estimation.}
+For the trained models, we estimate the feature effects 
+$\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$ per feature using
+equations~(\ref{eq:pdp-estimate}) and (\ref{eq:ale-estimate-uncentered}). For
+Monte Carlo integration, we use for each the full training and validation set
+as well as a cross-validation strategy. In the latter case, we use a 5-fold
+cross-validation on the combined samples of training and validation set, in
+each fold fit the model on four folds, and estimate the feature effects on the
+remaining fold. We then average the feature effects over all folds. We also
+estimate the ground truth feature effects $\widehat{PDP}_{f,S}$ and
+$\widehat{ALE}_{f,S}$ since the complexity of the Feynman equation makes
+analytical computation infeasible. For the Monte Carlo integration, we use
+10000 samples additionally sampled from the DGP, which introduces only a
+negligible additional variance term as we show in (\dots) We use 100 grid
+points, defined by the quantiles of the theoretical distribution of $X_S$ to
+enable a comparison across feature effects. Additionally, we center the curves
+after estimation to have a mean effect of $0$ w.r.t.\ the grid points, and we
+omit the first and the last grid point after estimation to avoid boundary
+effects especially occuring in ALE plots.
+
+\paragraph{Feature Effect Errors.} To quantify the error of the estimated feature effects, we compute the MSE of
+the estimated model feature effects with respect to the estimated ground truth
+features effects, as well as their bias and variance. For that, we use the
+estimators defined in equations~(\ref{eq:mse-estimator}) to
+(\ref{eq:variance-estimator}), using $\widehat{PDP}_{f,S}$ instead of
+$PDP_{f,S}$ as ground truth (analogously for ALE). We repeat each
+dataset-size-model combination $M=30$ times to estimate the error terms, where
+each repetition involves drawing a new training and validation set from the
+DGP, refitting the models, and estimating the feature effects. To aggregate the
+errors into a single measure per feature effect, we average the errors over the
+marginal distribution of $X_S$ by averaging over the grid points.
+
+\subsection{Ablation Experiments}\label{sec:experiment-ablation}
+\dots
 
 \section{Results}\label{sec:results}
 
@@ -551,7 +609,6 @@ performance of the models can be found in \textsc{Appendix~\ref{app:model-hps-pe
 \subsection{Summary \& Discussion}
 
 \subsection{Limitations \& Future Work}
-
 
 \begin{credits}
     \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is used for
@@ -670,21 +727,21 @@ R2-score).
 \subsection{Model Performance Evaluation}
 
 To ensure that the models perform as expected, we evaluate their performance
-both on the training data and a holdout test data with the latter consisting
-of 10000 samples to get a reliable performance estimate. The performances
-evaluated over the 30 repetitions are aggregated in \textbf{Fig.~\ref{fig:model-performance}}
-showing the R2-scores. As intended, the overfitting models perform better on
-the training data than the optimally tuned models, while being outperformed on
-the holdout test data and also exhibiting higher variance in their generalization
-performance. Note that the linear regression model serves only as a baseline. The
-overfitted SVM (SVM\_OF) show substantially worse performances on test data compared
-to the other models. Therefore, we excluded it from further analysis.
+both on the training data and a holdout test data with the latter consisting of
+10000 samples to get a reliable performance estimate. The performances
+evaluated over the 30 repetitions are aggregated in
+\textbf{Fig.~\ref{fig:model-performance}} showing the R2-scores. As intended,
+the overfitting models perform better on the training data than the optimally
+tuned models, while being outperformed on the holdout test data and also
+exhibiting higher variance in their generalization performance. Note that the
+linear regression model serves only as a baseline. The overfitted SVM (SVM\_OF)
+show substantially worse performances on test data compared to the other
+models. Therefore, we excluded it from further analysis.
 
 \begin{figure}
     \includegraphics[width=\textwidth]{img/model_performances.png}
-    \caption{Performance of the models on training (left) and holdout test data (right), each boxplot aggregates 30 repetitions}
+    \caption{R2-score of the models on training (left) and holdout test data (right), each boxplot aggregates 30 repetitions}
     \label{fig:model-performance}
 \end{figure}
-
 
 \end{document}
