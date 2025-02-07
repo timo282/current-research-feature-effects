@@ -51,91 +51,271 @@
 Most Machine Learning (ML) models can be considered black boxes --- opaque
 systems that intrinsically do not allow insight into their internal reasoning,
 making it often impossible to explain their decisions. However, this can be
-problematic in many domains and applications, such as the healthcare, legal, or
-finance sectors, where decisions must be transparent and
+problematic in many critical domains and applications, such as the healthcare,
+legal, or finance sectors, where decisions must be transparent and
 accountable~\cite{adadi_peeking_2018}.
 
-Interpretability is crucial to enhance
+Interpretability in ML is crucial to enhance
 trust~\cite{ribeiro_why_2016,teach_analysis_1981}, address potential
 biases~\cite{guidotti_survey_2019}, fairness and ethical concerns
 ~\cite{lipton_mythos_2018}, and ensure compliance with regulations such as the
 EU's General Data Protection Regulation (GDPR)~\cite{gdpr2016} and AI
 Act~\cite{euaia2024}. To address these challenges, the field of Explainable AI
-/ Interpretable ML has emerged~\cite{adadi_peeking_2018}. Although there are
-many different methods\footnote{For an overview of Explainable AI methods, see
-    e.g.~\cite{adadi_peeking_2018,kamath_introduction_2021,molnar_interpretable_2022}.},
-we will focus on feature effect methods like \textit{Partial Dependence Plots
-    (PDP)}~\cite{friedman_greedy_2001} and \textit{Accumulated Local Effects
-    (ALE)}~\cite{apley_visualizing_2020}.
+/ Interpretable ML has emerged~\cite{adadi_peeking_2018}. In the last years, a
+wide variety of methods has been developed, including model-specific and
+model-agnostic approaches ranging from local feature attributions to global
+feature importances and effects\footnote{For an overview of Explainable AI
+    methods, see
+    e.g.~\cite{adadi_peeking_2018,kamath_introduction_2021,molnar_interpretable_2022}.}.
 
 Due to the severity of many applications, it is crucial to utilize these
-explainability methods correctly. In general, there are many pitfalls to be
-aware of~\cite{molnar_general_2022}, including whether to compute explanations
-in-sample, i.e.\ on training data, or out-of-sample, which we refer to as
-validation data in the following. In loss-based methods such as
-\textit{Permutation Feature Importance (PFI)
-}\cite{breiman_random_2001,fisher_all_2019}, this choice is crucial and has
-already been studied (e.g., in~\cite{molnar_general_2022}). Nevertheless, other
-explainability methods, such as the \textit{Mean Decrease in Impurity (MDI)}
-(or \textit{Gini Importance}) of Random Forests, or \textit{SHAP}
-values~\cite{loecher_debiasing_2022,loecher_debiasing_2024}, have also been
-found to exhibit biases when computed on training data.
+explainability methods correctly to avoid misleading or incorrect conclusions.
+In general, there are many pitfalls to be aware of~\cite{molnar_general_2022},
+including whether to compute explanations in-sample, i.e.\ on training data, or
+out-of-sample, which we refer to as validation data in the following. Existing
+works have studied the implications of this choice for many methods, including
+studies on \textit{Permutation Feature Importance (PFI) } (e.g.,
+in~\cite{molnar_general_2022}), \textit{Mean Decrease in Impurity (MDI)} of
+Random Forests~\cite{loecher_debiasing_2022}, or \textit{SHAP}
+values~\cite{loecher_debiasing_2024}.
 
-However, to the best of our knowledge, there exist no similar studies for
-feature effect methods like PDP and ALE. Existing works, including the original
-papers of PDP and ALE, rely on training data without further justification
-(e.g.,~\cite{apley_visualizing_2020,friedman_greedy_2001,molnar_interpretable_2022}).
-In contrast, practitioners often advocate for using unseen test/validation
-data\footnote{see, e.g.\ \url{https://github.com/SauceCat/PDPbox/issues/68}
-    (10/27/2024)}, or base their choice on practical constraints like dataset
-size\footnote{see, e.g.
-    \url{https://forums.fast.ai/t/partial-dependence-plot/98465} (10/27/2024)}.
-While the training set is usually larger and might thus lead to less variance
-in the feature effect estimates, a too large dataset can increase computation
-times substantially, particularly for the PDP~\cite{friedman_greedy_2001}. On
-the other hand, although feature effects are not based on generalization error
-like PFI, it is not clear how much they are affected by overfitting or
-distribution shifts between training and validation data.
+However, to the best of our knowledge, there exist no such systematic studies
+for feature effect methods like \textit{Partial Dependence Plots
+    (PDP)}~\cite{friedman_greedy_2001} and \textit{Accumulated Local Effects
+    (ALE)}~\cite{apley_visualizing_2020}. Current literature
+(e.g.,~\cite{apley_visualizing_2020,friedman_greedy_2001,molnar_interpretable_2022})
+predominantly uses training data without explicit justification, while
+practitioners also advocate for using unseen validation data (for details, see
+\textsc{Section~\ref{sec:related-works}}). Factors that may influence this
+choice include potential biases arising from overfitting, the dataset size, and
+computational constraints. Although PDP and ALE are not based on generalization
+error like PFI, it is not studied if and how they are affected by overfitting.
+In addition, larger datasets may improve the feature effect estimates, but also
+increase computation times.\\
 
-In this paper, we aim to answer this largely unaddressed, fundamental
+\noindent In this paper, we aim to answer the largely unaddressed, fundamental
 methodological question of whether to use training or validation data to
-compute feature effects. We perform an empirical simulation study, comparing
-feature effect error and uncertainty for PDP and ALE across training data,
-validation data, and cross-validation scenarios, considering various data
-scenarios and model types. Our main contributions in this paper are as follows.
+compute feature effects. We perform an empirical simulation study, estimating
+PDP and ALE on training data, validation data, and in a cross-validated manner
+for different models and dataset. We decompose the error of PDP and ALE and
+compare the error components to understand the implications of the data choice.
+Our main contributions can be summarized as follows:
+
 \begin{enumerate}
     \item We shed light on the question of whether to compute feature effects on training
           data, validation data, or in a cross-validated manner, grounded through our
           comprehensive simulation study, considering feature effect error, bias, and
-          variance across different models and data scenarios.
-    \item We define methods to quantify feature effect error and uncertainty in a
-          theoretical framework, building upon previous work in this area.
-    \item We provide an overview of commonly used test functions for simulation studies
-          in Interpretable ML, including applications and purposes.
+          variance across different models and datasets.
+    \item We extend previous work to provide a theoretical framework for decomposing
+          feature effect errors and estimating the corresponding components.
+    \item We provide an overview of commonly used test functions for simulation studies,
+          including applications and purposes, as guidance for researchers in
+          Interpretable ML.
 \end{enumerate}
 
-These contributions have several important implications: Our empirically
+\noindent These contributions have several important implications: Firstly, our empirically
 grounded recommendations enable practitioners and researchers to make informed
-decisions about which dataset to select for feature effect computation, helping
-to understand potential implications of their choices. Additionally, our
-framework for evaluating feature effects and our systematic collection of test
-functions provide a foundation for future research in Interpretable ML, with
-the latter specifically facilitating test function choice for simulation
-studies.
+decisions about which data to choose for feature effect computation, helping to
+understand potential implications of their choices. Additionally, our framework
+for evaluating feature effects and systematic collection of test functions
+provide a foundation for future research in Interpretable ML, with the latter
+specifically facilitating test function choice for simulation studies.\\
 
-The remainder of this paper is structured as follows. In
-\textsc{Section~\ref{sec:related-works}}, we introduce the considered feature
-effect methods PDP and ALE, as well as related works on feature effect error
-and uncertainty, and give an overview of common test functions for simulation
-studies. In \textsc{Section~\ref{sec:quantify-fe-u}}, we extend existing works
-and give our definitions of feature effect errors and uncertainty. We then
-describe the methodology and set-up of our simulation studies in
+\noindent The remainder of this paper is structured as follows. In
+\textsc{Section~\ref{sec:related-works}}, we provide an overview of related
+works on feature effects and test functions for simulation studies. In
+\textsc{Section~\ref{sec:background}}, introduce the considered feature
+effect methods PDP and ALE, and demonstrate how to decompose the error of these
+feature effects, providing corresponding definitions and estimators.
+We then describe the methodology and set-up of our simulation studies in
 \textsc{Section~\ref{sec:methodology-set-up}}, present the results in
-\textsc{Section~\ref{sec:results}}, and discuss their implications and
-limitations in \textsc{Section~\ref{sec:discussion}}. In
-\textsc{Section~\ref{sec:conclusion}}, we briefly conclude our work.
+\textsc{Section~\ref{sec:results}}, and conclude our work with a discussion 
+of their implications and limitations in \textsc{Section~\ref{sec:conclusion}}.
 
-\section{Background \& Related Work}\label{sec:related-works}
+\section{Related Works}\label{sec:related-works}
+
+\subsection{Feature Effects}
+
+\paragraph{Feature Effect Methods.}
+Current literature offers various methods for analyzing feature effects in ML.
+One of the most popular methods is the \textit{Partial Dependence Plot
+    (PDP)}~\cite{friedman_greedy_2001}, which describes the marginal effect of one
+or two features on the model prediction. The PDP assumes that the features of
+interest are independent of the remaining features. When this assumption is
+violated, the method may produce unrealistic data points outside the underlying
+joint distribution of the data. This extrapolation issue can cause misleading
+interpretations~\cite{molnar_interpretable_2022,molnar_general_2022}.
+
+\textit{M-Plots (Marginal Plots)} try to address this issue by considering the
+conditional distribution of the remaining features given the feature of interest
+but instead suffer from the omitted variable
+bias~\cite{apley_visualizing_2020,friedman_greedy_2001}.
+
+The \textit{Accumulated Local Effects (ALE)} plot~\cite{apley_visualizing_2020}
+addresses both issues by accumulating local differences in model predictions
+along the feature of interest, computing conditional expectations within small
+intervals rather than across the entire feature range.
+
+Alternative approaches include \textit{functional ANOVA (fANOVA)}, which
+decomposes feature effects into main and interaction
+effects~\cite{hooker_discovering_2004}. Recent extensions have further
+addressed limitations of these classical methods. For example, \textit{Robust
+    and Heterogeneity-aware ALE (RHALE)}~\cite{gkolemis_rhale_2023} adds
+heterogeneity quantification to ALE and improving robustness, or
+\textit{Accumulated Total Derivative Effect (ATDEV)} plots can be decomposed
+into ALE and \textit{Accumulated Cross Effects (ACE)}~\cite{liu_model_2018}.
+
+Beyond these global feature effect methods, there are regional effect plots
+such as \textit{REPID}~\cite{herbinger_repid_2022}, and local methods like
+\textit{ICE (Individual Conditional Expectation)}
+curves~\cite{goldstein_peeking_2015} or SHAP dependence
+plots~\cite{lundberg_local_2020}.
+
+In this paper, we focus on PDP and ALE and refer to them when speaking of
+feature effects.
+
+\paragraph{Feature Effect Error and Uncertainty.}
+Multiple works have approached measuring uncertainty in feature effects. For
+probabilistic ML models, Moosbauer et al.\cite{moosbauer_explaining_2021}
+derived model-specific confidence bands for PDPs, while applied studies have
+proposed bootstrap-based
+approaches\cite{esselman_landscape_2015,grange_using_2019}. While the former
+are not model-agnostic, the latter often capture only the variance introduced
+by Monte Carlo approximation. Nonetheless, the model variance is another source
+of uncertainty in PDPs and ALEs, and accounting for it requires multiple model
+fits~\cite{apley_visualizing_2020,molnar_general_2022}.
+
+Molnar et al.~\cite{molnar_relating_2023} give formalizations of PDP (and PFI)
+as statistical estimators of ground truth estimands, demonstrate the
+decomposition of its mean squared error (MSE) into model bias, model variance,
+and Monte Carlo variance, and provide estimators for both Monte Carlo and
+overall variance. Our work builds upon and extends this idea.
+
+\paragraph{Data Choice for Feature Effect Estimation.}
+For many interpretability methods, the choice whether to compute explanations
+in-sample (on training data) or out-of-sample (on validation data) can
+significantly impact interpretations: For loss-based methods such as
+\textit{Permutation Feature Importance (PFI)
+}\cite{breiman_random_2001,fisher_all_2019}, this choice is crucial and has
+been extensively studied (e.g., in~\cite{molnar_general_2022}). Similar
+concerns have been identified for other explainability methods: both the
+\textit{Mean Decrease in Impurity (MDI)} of Random Forests and \textit{SHAP}
+values have been shown to potentially exhibit biases when computed on training
+data~\cite{loecher_debiasing_2022,loecher_debiasing_2024}.
+
+For feature effect methods, however, the implications of this choice remain
+largely unexplored. The original works introducing
+PDP~\cite{friedman_greedy_2001} and ALE~\cite{apley_visualizing_2020}, as well
+as general introductory literature on Interpretable
+ML~\cite{molnar_interpretable_2022}, predominantly use training data without
+explicit justification. In contrast, practitioners often advocate for using
+holdout data or base their choice on practical constraints such as dataset
+size\footnote{for examples, see
+    \url{https://github.com/SauceCat/PDPbox/issues/68} and
+    \url{https://forums.fast.ai/t/partial-dependence-plot/98465} (both accessed
+    10/27/2024)}. A too large dataset can increase computation times substantially,
+particularly for PDPs~\cite{friedman_greedy_2001}. Moreover, Molnar et
+al.~\cite{molnar_relating_2023} estimate the PDP on holdout data when aiming to
+quantify the variance of feature effect estimates. Nonetheless, a systematic
+study on the implications of the data choice for feature effect estimation is
+missing so far.
+
+\subsection{Test Functions for Simulation Studies}\label{sec:test-functions}
+
+Test functions play a crucial role in research, e.g.\ for evaluating different
+methodological approaches, or when conducting simulation studies. In the
+following, we synthesize commonly used test functions across various domains,
+providing structured guidance for researchers --- particularly those in
+Interpretable ML --- in selecting appropriate test functions for their
+simulation studies. By examining test functions from different fields and their
+purposes of application, we aim to facilitate experimental design decisions
+rather than giving an exhaustive overview.
+
+\paragraph{Test Functions in Optimization.}
+The field of optimization, where test functions are essential to enable the
+assessment and comparison of optimization algorithms, has established a rich
+foundation of test functions. A fundamental approach involves using simple
+mathematical expressions like the sphere function~\cite{more_testing_1981}.
+These basic functions are often combined with more complex ones like Branin or
+Rosenbrock to create comprehensive test suites that incorporate important
+properties such as nonlinearity, non-separability, and
+scalability~\cite{whitley_building_1998}. A notable framework in this domain is
+the Comparing Continuous Optimizer (COCO) platform with its Black Box
+Optimization Benchmark (BBOB), offering a structured approach to testing
+continuous optimization algorithms through artificial test
+functions~\cite{hansen_coco_2016}. These classical test function suites are
+well-established in optimization and may also serve as a basis for
+Interpretable ML researchers. However, the ability of these artifical test
+functions to represent complex real-world behavior is often
+limited~\cite{zaefferer_simulation-based_2017}.
+
+\paragraph{Physics-Inspired Test Functions.}
+
+Physics-derived functions offer a compelling source of real-world test cases,
+with the \textit{Feynman Symbolic Regression Database
+    (FSReD)}~\cite{udrescu_ai_2020} being a prominent example. FSReD comprises 100
+physics equations from the seminal \textit{Feynman's Lectures on Physics
+    (34--36)}, supplemented by 20 more challenging equations from other seminal
+physics texts. These equations span diverse physics domains and involve a
+varying number of variables and various elementary functions such as arithmetic
+operations, trigonometric functions, and exponentials. Tabular datasets are
+generated through random sampling from defined value ranges.
+
+Matsubara~et~al.~\cite{matsubara_rethinking_2024} addressed several limitations
+of the original FSReD. They introduce a three-tiered categorization of problems
+(easy, medium, hard) based on their complexity, incorporate dummy variables to
+simulate irrelevant features, and implement more realistic sampling ranges and
+strategies. Detailed specifications for all formulas, including their sampling
+parameters, are available in their work.
+
+While initially developed for symbolic regression tasks, many Feynman equations
+may serve as suitable test functions for simulation studies in Interpretable
+ML. Their basis in physical principles provides real-world relevance, though
+researchers should carefully select equations that align with their specific
+analytical objectives and complexity requirements.
+
+\paragraph{Test Functions for Interpretable Machine Learning.}
+The Interpretable ML field itself has developed several specialized test
+functions designed to evaluate specific aspects of interpretability methods.
+
+Goldstein et al.~\cite{goldstein_peeking_2015} used several simple test
+functions to demonstrate the behavior of Individual Conditional Expectation
+(ICE) curves. These include a simple additive function to demonstrate the
+absence of interactions, simple interactions to reveal heterogeneity that might
+be obscured by averaging procedures such as PDPs, and a specially designed
+function with an empty quadrant for assessing extrapolation behavior.
+
+Similarly, Liu et al.~\cite{liu_model_2018} focus on simple functions before
+progressing to more complex ones. They begin with basic two-variable scenarios
+--- using additive functions, interaction functions, and combinations thereof
+--- and examine these under both independent and correlated feature conditions
+to compare various feature effect methods. The advantage of these simple test
+functions is that solutions (e.g., feature effects) can also be computed
+analytically, and that they allow for deeper and more fine-grained analysis of
+individual aspects.
+
+A more complex test function suite was proposed by
+Tsang~et~al.~\cite{tsang_detecting_2017}, specifically designed to evaluate the
+detection of variable interactions. Their functions incorporate various types
+of interactions with different orders, strengths, non-linearities, and
+overlaps. While this makes them particularly valuable for interaction
+detection, they are also useful for evaluating other interpretability methods
+in scenarios with complex interactions.
+
+The Friedman functions~\cite{breiman_bagging_1996,friedman_multivariate_1991}
+serve as classical benchmarks applicable across various interpretability tasks.
+These three functions combine linear and non-linear effects with interactions,
+incorporating dummy variables and random noise terms to reflect realistic
+complexity. For detailed specifications, see~\cite{breiman_bagging_1996}.
+
+When choosing test functions for simulation studies in Interpretable ML,
+researchers should consider several criteria, including the specific aspects of
+interpretability being evaluated, the desired complexity level and number of
+variables, the presence of specific challenges such as correlation between
+features or interactions, the need for analytical solutions for validation, as
+well as the relevance to real-world applications in the domain of interest.
+
+\section{Background}\label{sec:background}
 
 \subsection{Feature Effects}
 
@@ -159,13 +339,7 @@ function of $x_S$ and can be estimated by Monte Carlo integration:
 \noindent Here, $x_C^{(i)}$ are the actual complement feature values from the dataset of $n$ instances.
 To plot this function, a grid of $G$ grid points
 $\{(x_S^{(g)}, \widehat{PD}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.
-Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.
-
-The PDP assumes that the features in $S$ are independent of the features in
-$C$. If this is violated, the perturbations may produce unrealistic data points
-outside the underlying joint distribution of the data. This extrapolation issue
-can cause misleading
-interpretations~\cite{molnar_interpretable_2022,molnar_general_2022}.\\
+Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.\\
 
 \noindent The \textit{Accumulated Local Effects (ALE)} plot is an alternative to the PDP that
 solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation above,
@@ -203,29 +377,6 @@ The uncentered ALE is centered by
 \noindent to have a mean effect of $0$. For the grid that defines the intervals,
 the quantiles of the empirical distribution of $\{x^{(i)}_S\}_{i=1}^n$ can be
 used~\cite{apley_visualizing_2020}.\\
-
-\noindent Other feature effect methods include the \textit{M-Plot (Marginal Plot)},
-which, however, suffers from the omitted variable
-bias~\cite{apley_visualizing_2020,friedman_greedy_2001},
-or \textit{functional ANOVA (fANOVA)}, which decomposes feature effects
-into main and interaction effects~\cite{hooker_discovering_2004}.
-
-Furthermore, methods exist that extend previous ones, such as \textit{Robust
-    and Heterogeneity-aware ALE (RHALE)}~\cite{gkolemis_rhale_2023}, or
-\textit{Accumulated Total Derivative Effect (ATDEV)} plots, which can be
-decomposed into ALE and \textit{Accumulated Cross Effects
-    (ACE)}~\cite{liu_model_2018}.
-
-In addition to these global feature effect methods, there are regional effect
-plots such as \textit{REPID}~\cite{herbinger_repid_2022}, as well as local
-methods, including \textit{ICE (Individual Conditional Expectation)}
-curves~\cite{goldstein_peeking_2015} or SHAP dependence plots
-(e.g.,~\cite{molnar_interpretable_2022}) based on SHAP
-values~\cite{lundberg_unified_2017}.
-
-For the remainder of this paper, we will focus on PDP and ALE as the most
-popular global feature effect methods and refer to them when speaking of
-feature effects.
 
 \subsection{Feature Effect Error Decomposition}
 
@@ -367,6 +518,7 @@ variance captures both the variance in the model fits and the variance due to
 MC integration. To estimate the MC variance, we propose the following estimators:
 \begin{equation}
     \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))^2
+    \label{eq:mc-variance-estimator-groundtruth}
 \end{equation}
 
 \noindent and
@@ -375,6 +527,7 @@ MC integration. To estimate the MC variance, we propose the following estimators
         \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
         \left(\widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S) - \frac{1}{K}\sum_{k=1}^K \widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S)\right)^2
     \end{split}
+    \label{eq:mc-variance-estimator-model}
 \end{equation}
 
 \noindent For more convenient analysis of the errors, one could also
@@ -384,106 +537,6 @@ to obtain a single error measure per feature effect.
 
 While our definitions are based on the PDP, they can be directly applied to the
 ALE as well.
-
-\section{Test Functions for Simulation Studies}\label{sec:test-functions}
-
-Test functions play a crucial role in research, e.g.\ for evaluating and
-comparing different methodological approaches, or when conducting simulation
-studies. This section synthesizes commonly used test functions across various
-domains, providing structured guidance for researchers --- particularly those
-in Interpretable ML --- in selecting appropriate test functions for their
-simulation studies. By examining test functions from different fields and their
-purposes of application, we aim to facilitate experimental design decisions.
-While this overview is not exhaustive, it highlights key test functions and
-their characteristics to help researchers make informed choices for their
-specific research needs.
-
-\paragraph{Test Functions in Optimization.}
-The field of optimization, where test functions are essential to enable the
-assessment and comparison of optimization algorithms, has established a rich
-foundation of test functions. A fundamental approach involves using simple
-mathematical expressions like the sphere function~\cite{more_testing_1981}.
-These basic functions are often combined with more complex ones like Branin or
-Rosenbrock to create comprehensive test suites that incorporate important
-properties such as nonlinearity, non-separability, and
-scalability~\cite{whitley_building_1998}. A notable framework in this domain is
-the Comparing Continuous Optimizer (COCO) platform with its Black Box
-Optimization Benchmark (BBOB), offering a structured approach to testing
-continuous optimization algorithms through artificial test
-functions~\cite{hansen_coco_2016}. These classical test function suites are
-well-established in optimization and may also serve as a basis for
-Interpretable ML researchers. However, it is important to note that the ability
-of these artifical test functions to represent complex real-world behavior is
-limited~\cite{zaefferer_simulation-based_2017}.
-
-\paragraph{Physics-Inspired Test Functions.}
-
-Physics-derived functions offer a compelling source of real-world test cases,
-with the Feynman Symbolic Regression Database (FSReD) being a prominent
-example. FSReD comprises 100 physics equations from the seminal
-\textit{Feynman's Lectures on Physics (34--36)}, supplemented by 20 more
-challenging equations from other seminal physics texts~\cite{udrescu_ai_2020}.
-These equations span diverse physics domains including classical mechanics,
-electromagnetism, and quantum mechanics. They involve between one and nine
-independent variables and incorporate various elementary functions such as
-arithmetic operations, trigonometric functions, and exponentials. From that,
-tabular datasets were generated through random sampling from defined value
-ranges.
-
-Building upon this foundation,
-Matsubara~et~al.~\cite{matsubara_rethinking_2024} addressed several limitations
-of the original FSReD. Their enhanced framework introduces a three-tiered
-categorization of problems (easy, medium, hard) based on their complexity,
-incorporates dummy variables to simulate irrelevant features, and implements
-more realistic sampling ranges and strategies. Detailed specifications for all
-formulas, including their sampling parameters, are available in their work.
-
-While initially developed for symbolic regression tasks, many Feynman equations
-may serve as suitable test functions for simulation studies in Interpretable
-ML. Their basis in physical principles provides real-world relevance, though
-researchers should carefully select equations that align with their specific
-analytical objectives and complexity requirements.
-
-\paragraph{Test Functions for Interpretable Machine Learning.}
-The Interpretable ML field itself has developed several specialized test
-functions designed to evaluate specific aspects of interpretability methods.
-
-Goldstein et al.~\cite{goldstein_peeking_2015} used several simple test
-functions to demonstrate the behavior of Individual Conditional Expectation
-(ICE) curves. These include a simple additive function to demonstrate the
-absence of interactions, simple interactions to reveal heterogeneity that might
-be obscured by averaging procedures such as PDPs, and a specially designed
-function with an empty quadrant for assessing extrapolation behavior.
-
-Similarly, Liu et al.~\cite{liu_model_2018} focus on simple functions before
-progressing to more complex ones. They begin with basic two-variable scenarios
---- using additive functions, interaction functions, and combinations thereof
---- and examine these under both independent and correlated feature conditions
-to compare various feature effect methods. The advantage of these simple test
-functions is that solutions (e.g., feature effects) can also be computed
-analytically, and that they allow for deeper and more fine-grained analysis of
-individual aspects.
-
-A more complex test function suite was proposed by
-Tsang~et~al.~\cite{tsang_detecting_2017}, specifically designed to evaluate the
-detection of variable interactions. Their functions incorporate various types
-of interactions with different orders, strengths, non-linearities, and
-overlaps. While this makes them particularly valuable for interaction
-detection, they are also useful for evaluating other interpretability methods
-in scenarios with complex interactions.
-
-The Friedman functions~\cite{breiman_bagging_1996,friedman_multivariate_1991}
-serve as classical benchmarks applicable across various interpretability tasks.
-These three functions combine linear and non-linear effects with interactions,
-incorporating dummy variables and random noise terms to reflect realistic
-complexity. For detailed specifications, see~\cite{breiman_bagging_1996}.
-
-When choosing test functions for simulation studies in Interpretable ML,
-researchers should consider several criteria, including the specific aspects of
-interpretability being evaluated, the desired complexity level and number of
-variables, the presence of specific challenges such as correlation between
-features or interactions, the need for analytical solutions for validation, as
-well as the relevance to real-world applications in the domain of interest.
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
@@ -567,9 +620,9 @@ paradigms:
 and tuned on a different dataset for optimal tuning. Details on the hyperparameters and performances
 of the models can be found in \textsc{Appendix~\ref{app:model-hps-perf}}.
 
-\paragraph{Feature Effect Estimation.}
-For the trained models, we estimate the feature effects 
-$\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$ per feature using
+\paragraph{Feature effect estimation.}
+For the trained models, we estimate the feature effects $\widehat{PDP}_{\hat
+        f,S}$ and $\widehat{ALE}_{\hat f,S}$ per feature using
 equations~(\ref{eq:pdp-estimate}) and (\ref{eq:ale-estimate-uncentered}). For
 Monte Carlo integration, we use for each the full training and validation set
 as well as a cross-validation strategy. In the latter case, we use a 5-fold
@@ -587,7 +640,7 @@ after estimation to have a mean effect of $0$ w.r.t.\ the grid points, and we
 omit the first and the last grid point after estimation to avoid boundary
 effects especially occuring in ALE plots.
 
-\paragraph{Feature Effect Errors.} To quantify the error of the estimated feature effects, we compute the MSE of
+\paragraph{Feature effect errors.} To quantify the error of the estimated feature effects, we compute the MSE of
 the estimated model feature effects with respect to the estimated ground truth
 features effects, as well as their bias and variance. For that, we use the
 estimators defined in equations~(\ref{eq:mse-estimator}) to
@@ -600,7 +653,40 @@ errors into a single measure per feature effect, we average the errors over the
 marginal distribution of $X_S$ by averaging over the grid points.
 
 \subsection{Ablation Experiments}\label{sec:experiment-ablation}
-\dots
+
+As described earlier, we conduct two ablation studies for more detailed
+insights into the Monte Carlo variance.
+
+\paragraph{Variance decomposition study.} The variance of the feature effects estimated with the procedure described in
+the main experiment \textsc{Section~\ref{sec:experiment-main}} consists of two
+components: the model variance and the variance due to the Monte Carlo
+integration. To disentangle these two sources of variance, we aim to
+additionally estimate the Monte Carlo variance using the estimator in
+equation~(\ref{eq:mc-variance-estimator-model}). This allows us to substract it
+from the total variance estimated in the main experiment and obtain the model
+variance, giving more nuanced insights into the implications of the data choice
+on feature effect estimation. To obtain this estimate, we maintain the set-up
+of the main experiment but for each trained model $\hat f^{(m)}$ (plus five
+models from CV $\hat f^{(m,1)} - \hat f^{(m,5)}$), we draw $K=30$ new training
+and validation sets from the DGP and estimate the feature effects on these sets
+plus in a cross-validated manner with the already fitted models. This allows us
+to estimate the Monte Carlo variance as in
+equation~(\ref{eq:mc-variance-estimator-model}). Since this study is
+computationally more expensive, we do this only for XGBoost (OT and OF) with
+the same datasets and sizes as in the main experiment.
+
+\paragraph{Impact of dataset size on Monte Carlo variance.} To investigate the impact of the dataset size on the Monte Carlo variance, we
+estimate the Monte Carlo variance between the analytical ground truth feature
+effects and the estimated ground truth feature effects on different dataset
+sizes. As estimator for the Monte Carlo variance, we use
+equation~(\ref{eq:mc-variance-estimator-groundtruth}). With this approach, we
+entirely omit the model and thus eliminate other error sources such as model
+bias and variance (as with a perfect model fit). To estimate the ground truth
+feature effects, we use 50 different dataset sizes ranging from $10^1$ to
+$10^6$ on a logarithmic scale. Note that we only consider the
+SimpleNormalCorrelated and Friedman1 datasets for this study as an analytical
+computation of the FeynmanI.29.16 feature effects is infeasible. For other
+details, we maintain the set-up of the main experiment.
 
 \section{Results}\label{sec:results}
 
@@ -667,7 +753,7 @@ of 10000 to get a reliable performance estimate. While this scenario is
 unrealistic in practice, it allows as to consider hyperparameters as
 ``pre-selected'' and avoid costly nested resampling strategies for the
 simulation study. Each model was tuned for 200 trials using a
-\textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra_algorithms_2011}
+\textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra2011algorithms}
 using validation MSE as objective to minimize (equivalent to maximizing
 R2-score).
 
