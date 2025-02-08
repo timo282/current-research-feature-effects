@@ -8,7 +8,7 @@
 \usepackage{tabularx}
 \usepackage{ragged2e}
 \usepackage{booktabs} 
-\usepackage{svg}
+\usepackage{subcaption}
 \usepackage[misc]{ifsym}
 \newcommand{\corr}{(\Letter)}
 % N.B.: do not change anything above this line. If you require additional packages, please load them directly after this line.
@@ -689,6 +689,73 @@ computation of the FeynmanI.29.16 feature effects is infeasible. For other
 details, we maintain the set-up of the main experiment.
 
 \section{Results}\label{sec:results}
+
+\subsection{Main Experiment}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT}
+    \end{subfigure}
+    \\[10pt]
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset. \dots}
+    \label{fig:pdp-results-snc}
+ \end{figure}
+
+ \begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT}
+    \end{subfigure}
+    \\[10pt]
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset. \dots}
+    \label{fig:ale-results-snc}
+ \end{figure}
+
 
 \section{Conclusions}\label{sec:conclusion}
 
