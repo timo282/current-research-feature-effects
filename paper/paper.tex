@@ -129,7 +129,7 @@ effect methods PDP and ALE, and demonstrate how to decompose the error of these
 feature effects, providing corresponding definitions and estimators.
 We then describe the methodology and set-up of our simulation studies in
 \textsc{Section~\ref{sec:methodology-set-up}}, present the results in
-\textsc{Section~\ref{sec:results}}, and conclude our work with a discussion 
+\textsc{Section~\ref{sec:results}}, and conclude our work with a discussion
 of their implications and limitations in \textsc{Section~\ref{sec:conclusion}}.
 
 \section{Related Works}\label{sec:related-works}
@@ -722,9 +722,9 @@ details, we maintain the set-up of the main experiment.
     \end{subfigure}
     \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset. \dots}
     \label{fig:pdp-results-snc}
- \end{figure}
+\end{figure}
 
- \begin{figure}[htbp]
+\begin{figure}[htbp]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OF.png}
@@ -754,8 +754,7 @@ details, we maintain the set-up of the main experiment.
     \end{subfigure}
     \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset. \dots}
     \label{fig:ale-results-snc}
- \end{figure}
-
+\end{figure}
 
 \section{Conclusions}\label{sec:conclusion}
 
@@ -896,5 +895,357 @@ models. Therefore, we excluded it from further analysis.
     \caption{R2-score of the models on training (left) and holdout test data (right), each boxplot aggregates 30 repetitions}
     \label{fig:model-performance}
 \end{figure}
+
+\clearpage
+\section{Additional Main Experiment Results}\label{app:additional-results}
+
+\subsection{SimpleNormalCorrelated Dataset}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[h!]
+    \ContinuedFloat
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_O PDP results on SimpleNormalCorrelatedT}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset. $x_3$ and $x_4$ are dummy variables.}
+    \label{fig:pdp-results-snc-all}
+\end{figure*}
+
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[h!]
+    \ContinuedFloat
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset. $x_3$ and $x_4$ are dummy variables.}
+    \label{fig:ale-results-snc-all}
+\end{figure*}
+
+\clearpage
+\subsection{Friedman1 Dataset}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on Friedman1}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on Friedman1}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on Friedman1 dataset. $x_6$ and $x_7$ are dummy variables.}
+    \label{fig:pdp-results-friedman1}
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on Friedman1}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on Friedman1 dataset. $x_6$ and $x_7$ are dummy variables.}
+\label{fig:ale-results-friedman1}
+\end{figure*}
+
+\clearpage
+\subsection{Feynman I.29.16 Dataset}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+\end{figure*}
+
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on FeynmanI.29.16 dataset. $d_1$ and $d_2$ are dummy variables.}
+    \label{fig:pdp-results-feynman}
+\end{figure*}
+
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+\end{figure*}
+
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on FeynmanI.29.16 dataset. $d_1$ and $d_2$ are dummy variables.}
+    \label{fig:ale-results-feynman}
+\end{figure*}
+
 
 \end{document}
