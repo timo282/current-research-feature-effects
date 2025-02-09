@@ -107,9 +107,16 @@ def plot_groundtruth(groundtruth: Groundtruth, grid_points: Dict[str, np.ndarray
 
 
 def boxplot_model_results(
-    metric: Literal["mse", "mae", "r2"], df: pd.DataFrame, ylim: Optional[Tuple[float, float]] = None
+    metric: Literal["mse", "mae", "r2"],
+    df: pd.DataFrame,
+    ylim: Optional[Tuple[float, float]] = None,
+    large_font: bool = False,
 ) -> plt.Figure:
     set_style()
+    if large_font:
+        _set_fontsize("large")
+    else:
+        _set_fontsize("standard")
     fig, ax = plt.subplots(1, 2, figsize=(12, 6), dpi=300, sharey=True)
     fig.suptitle("Model evaluation", fontsize=16, fontweight="bold")
     ax[0].set_title(f"{metric} on train set")
@@ -122,6 +129,7 @@ def boxplot_model_results(
         **get_boxplot_style(),
     )
     ax[0].legend().set_visible(False)
+    ax[0].set_ylabel(metric)
     if ylim is not None:
         ax[0].set_ylim(ylim)
     sns.boxplot(
@@ -198,6 +206,53 @@ def boxplot_model_results(
 #     return fig
 
 
+def _set_fontsize(size: Literal["standard", "large", "xlarge"]) -> None:
+    """
+    Set the font size of the plots.
+
+    Parameters
+    ----------
+    size : {'standard', 'large', 'xlarge'}
+        The font size to set.
+    """
+    if size == "xlarge":
+        plt.rcParams.update(
+            {
+                "font.size": 16,
+                "axes.labelsize": 18,
+                "axes.titlesize": 20,
+                "figure.titlesize": 22,
+                "xtick.labelsize": 16,
+                "ytick.labelsize": 16,
+                "legend.fontsize": 16,
+            }
+        )
+    elif size == "large":
+        plt.rcParams.update(
+            {
+                "font.size": 14,
+                "axes.labelsize": 16,
+                "axes.titlesize": 18,
+                "figure.titlesize": 20,
+                "xtick.labelsize": 14,
+                "ytick.labelsize": 14,
+                "legend.fontsize": 14,
+            }
+        )
+    else:
+        plt.rcParams.update(
+            {
+                "font.size": 11,
+                "axes.labelsize": 12,
+                "axes.titlesize": 12,
+                "figure.titlesize": 16,
+                "xtick.labelsize": 10,
+                "ytick.labelsize": 10,
+                "legend.fontsize": 12,
+            }
+        )
+
+
 def plot_feature_effect_error_table(
     df: pd.DataFrame,
     models: List[str],
@@ -226,29 +281,9 @@ def plot_feature_effect_error_table(
     """
     for model in models:
         if large_font:
-            plt.rcParams.update(
-                {
-                    "font.size": 16,
-                    "axes.labelsize": 18,
-                    "axes.titlesize": 20,
-                    "figure.titlesize": 22,
-                    "xtick.labelsize": 16,
-                    "ytick.labelsize": 16,
-                    "legend.fontsize": 18,
-                }
-            )
+            _set_fontsize("xlarge")
         else:
-            plt.rcParams.update(
-                {
-                    "font.size": 11,
-                    "axes.labelsize": 12,
-                    "axes.titlesize": 12,
-                    "figure.titlesize": 16,
-                    "xtick.labelsize": 10,
-                    "ytick.labelsize": 10,
-                    "legend.fontsize": 12,
-                }
-            )
+            _set_fontsize("standard")
 
         g = sns.FacetGrid(
             df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=0.67
