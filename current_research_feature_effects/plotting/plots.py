@@ -307,6 +307,78 @@ def plot_feature_effect_error_table(
     plt.show()
 
 
+def plot_fe_bias_variance(error_dict, sharey=True, large_font=False) -> plt.Figure:
+    """
+    Plot the bias and variance of the feature effects over the grid points.
+
+    Parameters
+    ----------
+    error_dict : Dict
+        A dictionary containing the feature effect errors.
+    sharey : bool, optional
+        If True, share the y-axis across all subplots (default is True).
+    large_font : bool, optional
+        If True, use larger font sizes (default is False).
+
+    Returns
+    -------
+    plt.Figure
+        A Figure object containing the generated plots.
+    """
+    sns.set_theme(style="ticks")
+    palette = sns.color_palette("Set2")
+
+    if large_font:
+        _set_fontsize("xlarge")
+    else:
+        _set_fontsize("standard")
+
+    n_features = len(list(list(error_dict.values())[0].values())[0].features)
+    fig, axes = plt.subplots(len(error_dict), n_features, figsize=(5 * n_features, 5 * len(error_dict)), sharey=sharey)
+
+    colors = {"Bias^2": palette[1], "Variance": palette[2]}  # Orange  # Purple
+
+    legend_lines = []
+    legend_labels = []
+
+    for i, (split, metrics) in enumerate(error_dict.items()):
+        for metric in ["Bias^2", "Variance"]:
+            for j, feature in enumerate(metrics[metric].features):
+                line = axes[i, j].plot(
+                    metrics[metric].features[feature]["grid"],
+                    metrics[metric].features[feature]["effect"],
+                    linewidth=2,
+                    color=colors[metric],
+                    marker="+",
+                )[0]
+
+                if i == 0 and j == 0:
+                    legend_lines.append(line)
+                    legend_labels.append(metric)
+
+                axes[i, j].set_title(f"{split}: {metrics[metric].effect_type.upper()} of ${feature}$", pad=10)
+                axes[i, j].set_xlabel(f"${feature}$")
+
+                sns.despine(ax=axes[i, j])
+
+    fig.legend(
+        legend_lines,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.0),
+        ncol=2,
+        frameon=False,
+        fontsize=18 if large_font else 12,
+    )
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
+    fig.set_dpi(200)
+    sns.reset_orig()
+
+    return fig
+
+
 def plot_mcvariance_over_features(
     mc_variance_data: Dict[float, FeatureEffect],
     feature_names: List[str],
