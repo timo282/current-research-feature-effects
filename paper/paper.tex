@@ -794,7 +794,49 @@ look into in \textsc{Appendix~\ref{app:main-study-further-investigation}}.
 
 \dots
 
+Finally, we also observe that the Monte Carlo variance --- as expected --- reduced with larger dataset size.
+We investigate this effect further in the next ablation study.
+
 \subsection{Ablation Study Results: Impact of Dataset Size on Monte Carlo Variance}\label{sec:results-dataset-size}
+
+We show the effect of the dataset size on the Monte Carlo variance for the features of the Friedman1 dataset
+for PDP and ALE in \textbf{Fig.\@~\ref{fig:mc-variance}}. The full results are provided in \textsc{Appendix~\ref{app:additional-mc-results}}.
+Naturally, we observe that the Monte Carlo variance decreases with increasing dataset size (except for $x_3$ and $x_4$ for PDP,
+where the variance is generally very small). We also see differences between the features: for more complex features like $x_1$ and $x_2$,
+which include interactions, the Monte Carlo variance is generally higher compared to simpler features like $x_3$ and $x_4$.
+Nonetheless, we observe an interesting difference between PDP and ALE. While they converge to a similar Monte Carlo variance for  % chktex 13
+large dataset sizes, the initial Monte Carlo variance for very small sample sizes is substantially higher for ALE than for PDP.  % chktex 13
+This demonstrates that ALE is more sensitive to the dataset size than PDP. This is most likely due to the fact that ALE  % chktex 13
+estimates effects per interval and thus requires more samples to estimate the effect accurately compared to PDP, which
+uses the full dataset to estimate the effect. Also note that this analysis shows that the Monte Carlo variance introduced
+by estimating the ground truth feature effects in the main study is for most cases negligible compared to the other error sources. 
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/mean_mc_variance_friedman1_pdp.png}
+        \caption{Mean Monte Carlo variance for PDP}
+        \label{fig:mc-variance-pdp}  % chktex 24
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/mean_mc_variance_friedman1_ale.png}
+        \caption{Mean Monte Carlo variance for ALE}
+        \label{fig:mc-variance-ale}  % chktex 24
+    \end{subfigure}
+    \caption{Mean Monte Carlo variance for PDP and ALE on Friedman1 dataset.
+    For each data size $n_{mc}$, variances are averaged over all grid points.
+    Second linear feature ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability.}
+    \label{fig:mc-variance}  % chktex 24
+\end{figure*}
+
+In addition, a detailed analysis of the Monte Carlo variance per grid point reveals that for PDP,
+the variance mostly depends on the sample density, while for ALE, the variance is also influenced by the
+shape of the underlying function. We provide detailed results in \textsc{Appendix~\ref{app:additional-mc-results}}.
+
 
 \clearpage
 \section{Conclusions}\label{sec:conclusion}
@@ -1332,7 +1374,7 @@ models. Therefore, we excluded it from further analysis.
 \end{figure*}
 
 \clearpage
-\section{Further Investigation of Main Experiment Results}\label{app:main-experiment-further-investigation}
+\section{Further Investigation of Main Experiment Results}\label{app:main-study-further-investigation}
 
 \begin{figure}
     \centering
@@ -1365,6 +1407,93 @@ models. Therefore, we excluded it from further analysis.
     }
     \label{fig:further-ale-xgb-friedman}  % chktex 24
 \end{figure}
+
+\clearpage
+\section{Additional Results for Ablation Study: Datasize Impact on Monte Carlo Variance}\label{app:additional-mc-results}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/mean_mc_variance_pdp.png}
+        \caption{Mean Monte Carlo variance on SimpleNormalCorrelated for PDP}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/mean_mc_variance_ale.png}
+        \caption{Mean Monte Carlo variance on SimpleNormalCorrelated for ALE}
+    \end{subfigure}
+    \caption{Mean Monte Carlo variance for PDP and ALE on SimpleNormalCorrelated dataset.
+    For each data size $n_{mc}$, variances are averaged over all grid points.
+    Note that $x_3$ and $x_4$ are dummy features.}
+    \label{fig:mean-mc-variance-snc}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/mean_mc_variance_pdp.png}
+        \caption{Mean Monte Carlo variance on Friedman1 for PDP}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/mean_mc_variance_ale.png}
+        \caption{Mean Monte Carlo variance on Friedman1 for ALE}
+    \end{subfigure}
+    \caption{Mean Monte Carlo variance for PDP and ALE on Friedman1 dataset.
+    For each data size $n_{mc}$, variances are averaged over all grid points.
+    Note that $x_6$ and $x_7$ are dummy features.}
+    \label{fig:mean-mc-variance-friedman1}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/mc_variance_pdp.png}
+        \caption{Monte Carlo variance on SimpleNormalCorrelated for PDP}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/mc_variance_ale.png}
+        \caption{Monte Carlo variance on SimpleNormalCorrelated for ALE}
+    \end{subfigure}
+    \caption{Monte Carlo variance for PDP and ALE on SimpleNormalCorrelated dataset.
+    The variances for different data sizes $n_{mc}$ (colors) are shown for each grid
+    point over the range of each feature (x-axis). The ground truth feature effect is
+    shown as dashed line for reference, using a different y-axis scale omitted for
+    clarity. Note that $x_3$ and $x_4$ are dummy features.}
+    \label{fig:mc-variance-snc}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/mc_variance_pdp.png}
+        \caption{Monte Carlo variance on Friedman1 for PDP}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/mc_variance_ale.png}
+        \caption{Monte Carlo variance on Friedman1 for ALE}
+    \end{subfigure}
+    \caption{Monte Carlo variance for PDP and ALE on Friedman1 dataset.
+    The variances for different data sizes $n_{mc}$ (colors) are shown for each grid
+    point over the range of each feature (x-axis). The ground truth feature effect is
+    shown as dashed line for reference, using a different y-axis scale omitted for
+    clarity. Note that $x_6$ and $x_7$ are dummy features.}
+    \label{fig:mc-variance-friedman1}  % chktex 24
+\end{figure*}
 
 
 \end{document}  % chktex 17
