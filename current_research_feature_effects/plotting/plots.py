@@ -1,6 +1,7 @@
 # from configparser import ConfigParser
 # import math
 from typing_extensions import Dict, Literal, List, Tuple, Optional
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,20 +25,37 @@ from current_research_feature_effects.plotting.utils import (
 # from current_research_feature_effects.feature_effects import compute_pdps, compute_ales
 
 
-def plot_feature_effect(effect: FeatureEffect) -> plt.Figure:
+def plot_feature_effect(effect: FeatureEffect | List[FeatureEffect], labels: List[str] = None) -> plt.Figure:
     """
     Plot feature effects for a given feature effect object.
 
     Parameters
     ----------
-    effect : FeatureEffect
-        A FeatureEffect object containing the feature effects to plot.
+    effect : FeatureEffect | List[FeatureEffect]
+        A FeatureEffect object or a list of FeatureEffect objects to be plotted.
+    labels : List[str], optional
+        A list of labels for the different FeatureEffect objects (default is None).
 
     Returns
     -------
     plt.Figure
         A Figure object containing the generated plots.
     """
+    if isinstance(effect, list):
+        n_features = len(effect[0].features)
+        fig, axs = plt.subplots(1, n_features, figsize=(5 * n_features, 5))
+        for i, feature in enumerate(effect[0].features):
+            for e in effect:
+                axs[i].plot(
+                    e.features[feature]["grid"], e.features[feature]["effect"], **get_feature_effect_plot_style()
+                )
+            axs[i].set_title(f"{effect[0].effect_type.upper()} of ${feature}$")
+
+        if labels is not None:
+            axs[-1].legend(labels)
+
+        return fig
+
     n_features = len(effect.features)
     fig, axs = plt.subplots(1, n_features, figsize=(5 * n_features, 5))
     for i, feature in enumerate(effect.features):
@@ -89,9 +107,16 @@ def plot_groundtruth(groundtruth: Groundtruth, grid_points: Dict[str, np.ndarray
 
 
 def boxplot_model_results(
-    metric: Literal["mse", "mae", "r2"], df: pd.DataFrame, ylim: Optional[Tuple[float, float]] = None
+    metric: Literal["mse", "mae", "r2"],
+    df: pd.DataFrame,
+    ylim: Optional[Tuple[float, float]] = None,
+    large_font: bool = False,
 ) -> plt.Figure:
     set_style()
+    if large_font:
+        _set_fontsize("large")
+    else:
+        _set_fontsize("standard")
     fig, ax = plt.subplots(1, 2, figsize=(12, 6), dpi=300, sharey=True)
     fig.suptitle("Model evaluation", fontsize=16, fontweight="bold")
     ax[0].set_title(f"{metric} on train set")
@@ -104,6 +129,7 @@ def boxplot_model_results(
         **get_boxplot_style(),
     )
     ax[0].legend().set_visible(False)
+    ax[0].set_ylabel(metric)
     if ylim is not None:
         ax[0].set_ylim(ylim)
     sns.boxplot(
@@ -119,51 +145,6 @@ def boxplot_model_results(
     fig.tight_layout()
 
     return fig
-
-
-# def boxplot_feature_effect_results(
-#     features: List[Literal["x_1", "x_2", "x_3", "x_4", "x_5"]],
-#     df: pd.DataFrame,
-#     effect_type: Literal["PDP", "ALE"],
-# ) -> plt.Figure:
-#     set_style()
-#     fig = plt.figure(
-#         figsize=(min(6 * len(features), 18), math.ceil(len(features) / 3) * 5),
-#         dpi=300,
-#     )
-#     fig.suptitle(
-#         f"Feature effect evaluation {effect_type} with {df['metric'].iloc[0]}",
-#         fontsize=16,
-#         fontweight="bold",
-#     )
-#     for i, feature in enumerate(features):
-#         if i == 0:
-#             plt.subplot(
-#                 math.ceil(len(features) / 3),
-#                 min(len(features), 3),
-#                 i + 1,
-#             )
-#         else:
-#             ax = plt.gca()
-#             plt.subplot(
-#                 math.ceil(len(features) / 3),
-#                 min(len(features), 3),
-#                 i + 1,
-#                 sharey=ax,
-#             )
-#         plt.title(f"{effect_type} of {feature}")
-#         sns.boxplot(
-#             x="snr",
-#             y=feature,
-#             hue="model",
-#             data=df,
-#             **get_boxplot_style(),
-#         )
-#         plt.legend().set_visible(False)
-#     plt.legend(title="Learner", bbox_to_anchor=(1.05, 1), loc="upper left").set_visible(True)
-#     fig.tight_layout()
-
-#     return fig
 
 
 # def plot_effect_comparison(
@@ -225,134 +206,61 @@ def boxplot_model_results(
 #     return fig
 
 
-# def plot_correlation_analysis(
-#     df_melted: pd.DataFrame,
-#     models: List[str],
-#     feature_effect: str,
-#     model_error_metric: str = "mse_test",
-#     correlation_metric: Literal["Pearson", "Spearman"] = "Pearson",
-#     overall_correlation: bool = False,
-#     return_correlation_table: bool = False,
-#     noise_name: str = "snr_x",
-# ) -> sns.axisgrid.FacetGrid | Tuple[sns.axisgrid.FacetGrid, pd.DataFrame]:
-#     """
-#     Plot correlation analysis between model error and a specified feature effect
-#     error across different signal-to-noise ratios and models.
+def _set_fontsize(size: Literal["standard", "large", "xlarge"]) -> None:
+    """
+    Set the font size of the plots.
 
-#     This function creates a series of scatter plots using Seaborn's FacetGrid,
-#     each representing a correlation analysis between model error metrics and
-#     feature effect errors. It can compute either Pearson or Spearman correlation
-#     depending on the specified correlation metric. Annotations indicating the
-#     correlation coefficients are added to each plot.
-
-#     Parameters
-#     ----------
-#     df_melted : pd.DataFrame
-#         A melted DataFrame (via plotting.utils.create_joined_melted_df) with each
-#         row representing a specific observation and containing columns for model id,
-#         feature error, and other variables.
-#     models : List[str]
-#         A list of model names to be used for hue in plots, should match values in
-#         'model_x' column of `df_melted`.
-#     feature_effect : str
-#         The name of the feature effect to plot.
-#     model_error_metric : str, optional
-#         The name of the model error metric to plot (default is "mse_test"),
-#         used to set xlabel in the plots.
-#     correlation_metric : {'Pearson', 'Spearman'}, optional
-#         The type of correlation to compute, either 'Pearson' or 'Spearman' (default is 'Pearson').
-#     overall_correlation : bool, optional
-#         If True, compute and annotate overall correlation per subplot. If False, only
-#         annotate correlations per model (default is False).
-#     return_correlation_table : bool, optional
-#         If True, return a DataFrame containing the correlation results (default is False).
-#     noise_name : str, optional
-#         Name of the noise column in the merged DataFrame, by default "snr_x".
-
-#     Returns
-#     -------
-#     seaborn.axisgrid.FacetGrid
-#         A FacetGrid object containing the generated plots.
-#     """
-#     set_style()
-
-#     def corr(x, y):
-#         if correlation_metric == "Pearson":
-#             return pearsonr(x, y)[0]
-#         elif correlation_metric == "Spearman":
-#             return spearmanr(x, y)[0]
-
-#     snrs = df_melted[noise_name].unique()
-
-#     g = sns.FacetGrid(
-#         df_melted,
-#         col=noise_name,
-#         row="feature",
-#         hue="model_x",
-#         palette="Set2",
-#         col_order=sorted(snrs),
-#         hue_order=models,
-#         aspect=1.5,
-#         height=4,
-#     )
-#     g.map(sns.scatterplot, model_error_metric, "effect_error")
-#     g.figure.suptitle(
-#         f"Correlation Analysis ({correlation_metric}): {feature_effect} Error vs. Model Error",
-#         fontsize=20,
-#         fontweight="bold",
-#         y=1.025,
-#     )
-#     g.figure.set_dpi(300)
-
-#     correlation_results = []
-
-#     for ax, ((feature, snr), sub_df) in zip(g.axes.flatten(), df_melted.groupby(["feature", noise_name])):
-#         if overall_correlation:
-#             overall_corr = (
-#                 corr(sub_df[model_error_metric], sub_df["effect_error"])
-#                 if len(sub_df["effect_error"]) > 1
-#                 else float("nan")
-#             )
-#             ax.text(
-#                 0.5,
-#                 0.9,
-#                 f"Overall Correlation: {overall_corr:.2f}",
-#                 ha="center",
-#                 va="center",
-#                 transform=ax.transAxes,
-#                 fontsize=9,
-#             )
-#             correlation_results.append(
-#                 {"snr": snr, "feature": feature, "model": "Overall", "correlation": overall_corr}
-#             )
-#         for model in models:
-#             model_data = sub_df[sub_df["model_x"] == model]
-#             if not model_data.empty:
-#                 model_error = model_data[model_error_metric]
-#                 effect_error = model_data["effect_error"]
-#                 model_corr = corr(model_error, effect_error) if len(model_error) > 1 else float("nan")
-#                 ax.text(
-#                     model_error.iloc[-1],
-#                     effect_error.iloc[-1],
-#                     f"{model_corr:.2f}",
-#                     color=sns.color_palette("Set2", n_colors=len(models)).as_hex()[models.index(model)],
-#                     fontsize=9,
-#               )
-#                correlation_results.append(
-#                    {"snr": snr, "feature": feature, "model": model, "correlation": model_corr}
-#                    )
-
-#     g.set_titles(col_template=noise_name + ": {col_name}", row_template="${row_name}$", fontweight=16)
-#     g.set_axis_labels(f"Model Error ({model_error_metric})", f"{feature_effect} Error")
-#     g.add_legend(title="Estimator")
-
-#     if return_correlation_table:
-#         return g, pd.DataFrame(correlation_results)
-
-#     return g
+    Parameters
+    ----------
+    size : {'standard', 'large', 'xlarge'}
+        The font size to set.
+    """
+    if size == "xlarge":
+        plt.rcParams.update(
+            {
+                "font.size": 16,
+                "axes.labelsize": 18,
+                "axes.titlesize": 20,
+                "figure.titlesize": 22,
+                "xtick.labelsize": 16,
+                "ytick.labelsize": 16,
+                "legend.fontsize": 16,
+            }
+        )
+    elif size == "large":
+        plt.rcParams.update(
+            {
+                "font.size": 14,
+                "axes.labelsize": 16,
+                "axes.titlesize": 18,
+                "figure.titlesize": 20,
+                "xtick.labelsize": 14,
+                "ytick.labelsize": 14,
+                "legend.fontsize": 14,
+            }
+        )
+    else:
+        plt.rcParams.update(
+            {
+                "font.size": 11,
+                "axes.labelsize": 12,
+                "axes.titlesize": 12,
+                "figure.titlesize": 16,
+                "xtick.labelsize": 10,
+                "ytick.labelsize": 10,
+                "legend.fontsize": 12,
+            }
+        )
 
 
-def plot_feature_effect_error_table(df: pd.DataFrame, models: List[str], type: Literal["pdp", "ale"]):
+def plot_feature_effect_error_table(
+    df: pd.DataFrame,
+    models: List[str],
+    type: Literal["pdp", "ale"],
+    save_figs: None | Path = None,
+    large_font: bool = False,
+    show_title: bool = True,
+):
     """
     Plot a table of feature effect errors for different models.
 
@@ -364,21 +272,111 @@ def plot_feature_effect_error_table(df: pd.DataFrame, models: List[str], type: L
         List of model names.
     type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
         Type of feature effect, either 'pdp' or 'ale'.
+    save_figs : None | Path
+        Path to save the figure (default is None).
+    large_font : bool
+        If True, use larger font sizes (default is False).
+    show_title : bool
+        If True, show the title of the plot (default is True).
     """
     for model in models:
-        g = sns.FacetGrid(
-            df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=1.5
-        )
+        if large_font:
+            _set_fontsize("xlarge")
+        else:
+            _set_fontsize("standard")
 
+        g = sns.FacetGrid(
+            df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=0.67
+        )
         g.map_dataframe(
             sns.barplot, x="split", y="value", hue="metric", hue_order=["MSE", "Bias^2", "Variance"], palette="Set2"
         )
-
-        g.add_legend(loc="upper center", bbox_to_anchor=(0.5, 1.0), ncol=3)
-        g.fig.suptitle(f"Feature Effect Errors {type.upper()} {model}", y=1.02)
+        g.set_titles(col_template="${col_name}$", row_template="n_train={row_name}")
+        if show_title:
+            g.fig.suptitle(f"Feature Effect Errors {type.upper()} {model}", y=1.02)
+            legend_pos = (0.5, 1.0)
+        else:
+            g.fig.suptitle("", y=1.02)
+            legend_pos = (0.5, 1.05)
+        g.add_legend(loc="upper center", bbox_to_anchor=legend_pos, ncol=3)
+        g.set_ylabels("")
         plt.tight_layout()
+        if save_figs is not None:
+            g.savefig(save_figs / f"feature_effect_errors_{type}_{model}.png", bbox_inches="tight", dpi=300)
 
     plt.show()
+
+
+def plot_fe_bias_variance(error_dict, sharey=True, large_font=False) -> plt.Figure:
+    """
+    Plot the bias and variance of the feature effects over the grid points.
+
+    Parameters
+    ----------
+    error_dict : Dict
+        A dictionary containing the feature effect errors.
+    sharey : bool, optional
+        If True, share the y-axis across all subplots (default is True).
+    large_font : bool, optional
+        If True, use larger font sizes (default is False).
+
+    Returns
+    -------
+    plt.Figure
+        A Figure object containing the generated plots.
+    """
+    sns.set_theme(style="ticks")
+    palette = sns.color_palette("Set2")
+
+    if large_font:
+        _set_fontsize("xlarge")
+    else:
+        _set_fontsize("standard")
+
+    n_features = len(list(list(error_dict.values())[0].values())[0].features)
+    fig, axes = plt.subplots(len(error_dict), n_features, figsize=(5 * n_features, 5 * len(error_dict)), sharey=sharey)
+
+    colors = {"Bias^2": palette[1], "Variance": palette[2]}  # Orange  # Purple
+
+    legend_lines = []
+    legend_labels = []
+
+    for i, (split, metrics) in enumerate(error_dict.items()):
+        for metric in ["Bias^2", "Variance"]:
+            for j, feature in enumerate(metrics[metric].features):
+                line = axes[i, j].plot(
+                    metrics[metric].features[feature]["grid"],
+                    metrics[metric].features[feature]["effect"],
+                    linewidth=2,
+                    color=colors[metric],
+                    marker="+",
+                )[0]
+
+                if i == 0 and j == 0:
+                    legend_lines.append(line)
+                    legend_labels.append(metric)
+
+                axes[i, j].set_title(f"{split}: {metrics[metric].effect_type.upper()} of ${feature}$", pad=10)
+                axes[i, j].set_xlabel(f"${feature}$")
+
+                sns.despine(ax=axes[i, j])
+
+    fig.legend(
+        legend_lines,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.0),
+        ncol=2,
+        frameon=False,
+        fontsize=18 if large_font else 12,
+    )
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)
+    fig.set_dpi(200)
+    sns.reset_orig()
+
+    return fig
 
 
 def plot_mcvariance_over_features(

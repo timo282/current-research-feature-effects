@@ -8,7 +8,7 @@
 \usepackage{tabularx}
 \usepackage{ragged2e}
 \usepackage{booktabs} 
-\usepackage{svg}
+\usepackage{subcaption}
 \usepackage[misc]{ifsym}
 \newcommand{\corr}{(\Letter)}
 % N.B.: do not change anything above this line. If you require additional packages, please load them directly after this line.
@@ -51,352 +51,185 @@
 Most Machine Learning (ML) models can be considered black boxes --- opaque
 systems that intrinsically do not allow insight into their internal reasoning,
 making it often impossible to explain their decisions. However, this can be
-problematic in many domains and applications, such as the healthcare, legal, or
-finance sectors, where decisions must be transparent and
+problematic in many critical domains and applications, such as the healthcare,
+legal, or finance sectors, where decisions must be transparent and
 accountable~\cite{adadi_peeking_2018}.
 
-Interpretability is crucial to enhance
+Interpretability in ML is crucial to enhance
 trust~\cite{ribeiro_why_2016,teach_analysis_1981}, address potential
 biases~\cite{guidotti_survey_2019}, fairness and ethical concerns
 ~\cite{lipton_mythos_2018}, and ensure compliance with regulations such as the
 EU's General Data Protection Regulation (GDPR)~\cite{gdpr2016} and AI
 Act~\cite{euaia2024}. To address these challenges, the field of Explainable AI
-/ Interpretable ML has emerged~\cite{adadi_peeking_2018}. Although there are
-many different methods\footnote{For an overview of Explainable AI methods, see
-    e.g.~\cite{adadi_peeking_2018,kamath_introduction_2021,molnar_interpretable_2022}.},
-we will focus on feature effect methods like \textit{Partial Dependence Plots
-    (PDP)}~\cite{friedman_greedy_2001} and \textit{Accumulated Local Effects
-    (ALE)}~\cite{apley_visualizing_2020}.
+/ Interpretable ML has emerged~\cite{adadi_peeking_2018}. In the last years, a
+wide variety of methods has been developed, including model-specific and
+model-agnostic approaches ranging from local feature attributions to global
+feature importances and effects\footnote{For an overview of Explainable AI
+    methods, see
+    e.g.~\cite{adadi_peeking_2018,kamath_introduction_2021,molnar_interpretable_2022}.}.
 
 Due to the severity of many applications, it is crucial to utilize these
-explainability methods correctly. In general, there are many pitfalls to be
-aware of~\cite{molnar_general_2022}, including whether to compute explanations
-in-sample, i.e.\ on training data, or out-of-sample, which we refer to as
-validation data in the following. In loss-based methods such as
-\textit{Permutation Feature Importance (PFI)
-}\cite{breiman_random_2001,fisher_all_2019}, this choice is crucial and has
-already been studied (e.g., in~\cite{molnar_general_2022}). Nevertheless, other
-explainability methods, such as the \textit{Mean Decrease in Impurity (MDI)}
-(or \textit{Gini Importance}) of Random Forests, or \textit{SHAP}
-values~\cite{loecher_debiasing_2022,loecher_debiasing_2024}, have also been
-found to exhibit biases when computed on training data.
+explainability methods correctly to avoid misleading or incorrect conclusions.
+In general, there are many pitfalls to be aware of~\cite{molnar_general_2022},
+including whether to compute explanations in-sample, i.e.\ on training data, or
+out-of-sample, which we refer to as validation data in the following. Existing
+works have studied the implications of this choice for many methods, including
+studies on \textit{Permutation Feature Importance (PFI) } (e.g.,
+in~\cite{molnar_general_2022}), \textit{Mean Decrease in Impurity (MDI)} of
+Random Forests~\cite{loecher_debiasing_2022}, or \textit{SHAP}
+values~\cite{loecher_debiasing_2024}.
 
-However, to the best of our knowledge, there exist no similar studies for
-feature effect methods like PDP and ALE. Existing works, including the original
-papers of PDP and ALE, rely on training data without further justification
-(e.g.,~\cite{apley_visualizing_2020,friedman_greedy_2001,molnar_interpretable_2022}).
-In contrast, practitioners often advocate for using unseen test/validation
-data\footnote{see, e.g.\ \url{https://github.com/SauceCat/PDPbox/issues/68}
-    (10/27/2024)}, or base their choice on practical constraints like dataset
-size\footnote{see, e.g.
-    \url{https://forums.fast.ai/t/partial-dependence-plot/98465} (10/27/2024)}.
-While the training set is usually larger and might thus lead to less variance
-in the feature effect estimates, a too large dataset can increase computation
-times substantially, particularly for the PDP~\cite{friedman_greedy_2001}. On
-the other hand, although feature effects are not based on generalization error
-like PFI, it is not clear how much they are affected by overfitting or
-distribution shifts between training and validation data.
+However, to the best of our knowledge, there exist no such systematic studies
+for feature effect methods like \textit{Partial Dependence Plots
+    (PDP)}~\cite{friedman_greedy_2001} and \textit{Accumulated Local Effects
+    (ALE)}~\cite{apley_visualizing_2020}. Current literature
+(e.g.,~\cite{apley_visualizing_2020,friedman_greedy_2001,molnar_interpretable_2022})
+predominantly uses training data without explicit justification, while
+practitioners also advocate for using unseen validation data (for details, see
+\textsc{Section~\ref{sec:related-works}}). Factors that may influence this
+choice include potential biases arising from overfitting, the dataset size, and
+computational constraints. Although PDP and ALE are not based on generalization
+error like PFI, it is not studied if and how they are affected by overfitting.
+In addition, larger datasets may improve the feature effect estimates, but also
+increase computation times.\\
 
-In this paper, we aim to answer this largely unaddressed, fundamental
+\noindent In this paper, we aim to answer the largely unaddressed, fundamental
 methodological question of whether to use training or validation data to
-compute feature effects. We perform an empirical simulation study, comparing
-feature effect error and uncertainty for PDP and ALE across training data,
-validation data, and cross-validation scenarios, considering various data
-scenarios and model types. Our main contributions in this paper are as follows.
+compute feature effects. We perform an empirical simulation study, estimating
+PDP and ALE on training data, validation data, and in a cross-validated manner
+for different models and dataset. We decompose the error of PDP and ALE and
+compare the error components to understand the implications of the data choice.
+Our main contributions can be summarized as follows:
+
 \begin{enumerate}
     \item We shed light on the question of whether to compute feature effects on training
           data, validation data, or in a cross-validated manner, grounded through our
           comprehensive simulation study, considering feature effect error, bias, and
-          variance across different models and data scenarios.
-    \item We define methods to quantify feature effect error and uncertainty in a
-          theoretical framework, building upon previous work in this area.
-    \item We provide an overview of commonly used test functions for simulation studies
-          in Interpretable ML, including applications and purposes.
+          variance across different models and datasets.
+    \item We extend previous work to provide a theoretical framework for decomposing
+          feature effect errors and estimating the corresponding components.
+    \item We provide an overview of commonly used test functions for simulation studies,
+          including applications and purposes, as guidance for researchers in
+          Interpretable ML.  % chktex 13
 \end{enumerate}
 
-These contributions have several important implications: Our empirically
+\noindent These contributions have several important implications: Firstly, our empirically
 grounded recommendations enable practitioners and researchers to make informed
-decisions about which dataset to select for feature effect computation, helping
-to understand potential implications of their choices. Additionally, our
-framework for evaluating feature effects and our systematic collection of test
-functions provide a foundation for future research in Interpretable ML, with
-the latter specifically facilitating test function choice for simulation
-studies.
+decisions about which data to choose for feature effect computation, helping to
+understand potential implications of their choices. Additionally, our framework
+for evaluating feature effects and systematic collection of test functions
+provide a foundation for future research in Interpretable ML, with the latter
+specifically facilitating test function choice for simulation studies.\\
 
-The remainder of this paper is structured as follows. In
-\textsc{Section~\ref{sec:related-works}}, we introduce the considered feature
-effect methods PDP and ALE, as well as related works on feature effect error
-and uncertainty, and give an overview of common test functions for simulation
-studies. In \textsc{Section~\ref{sec:quantify-fe-u}}, we extend existing works
-and give our definitions of feature effect errors and uncertainty. We then
-describe the methodology and set-up of our simulation studies in
+\noindent The remainder of this paper is structured as follows. In
+\textsc{Section~\ref{sec:related-works}}, we provide an overview of related
+works on feature effects and test functions for simulation studies. In
+\textsc{Section~\ref{sec:background}}, introduce the considered feature
+effect methods PDP and ALE, and demonstrate how to decompose the error of these
+feature effects, providing corresponding definitions and estimators.
+We then describe the methodology and set-up of our simulation studies in
 \textsc{Section~\ref{sec:methodology-set-up}}, present the results in
-\textsc{Section~\ref{sec:results}}, and discuss their implications and
-limitations in \textsc{Section~\ref{sec:discussion}}. In
-\textsc{Section~\ref{sec:conclusion}}, we briefly conclude our work.
+\textsc{Section~\ref{sec:results}}, and conclude our work with a discussion
+of their implications and limitations in \textsc{Section~\ref{sec:conclusion}}.
 
-\section{Background \& Related Work}\label{sec:related-works}
+\section{Related Works}\label{sec:related-works}
 
 \subsection{Feature Effects}
 
-The \textit{Partial Dependence Plot (PDP)} by
-Friedman~\cite{friedman_greedy_2001} describes the marginal effect of one or
-two features on the prediction of a model $\hat f$. For a feature set $X_S$
-(with $S \subseteq \{1,\ldots,p\}$, $|S| = 1$ or $|S| = 2$), the PDP is defined
-as
+\paragraph{Feature Effect Methods.}
+Current literature offers various methods for analyzing feature effects in ML. % chktex 13
+One of the most popular methods is the \textit{Partial Dependence Plot
+    (PDP)}~\cite{friedman_greedy_2001}, which describes the marginal effect of one
+or two features on the model prediction. The PDP assumes that the features of
+interest are independent of the remaining features. When this assumption is
+violated, the method may produce unrealistic data points outside the underlying
+joint distribution of the data. This extrapolation issue can cause misleading
+interpretations~\cite{molnar_interpretable_2022,molnar_general_2022}.
 
-\begin{equation}
-    PDP_{\hat f, S} = \mathbb{E}_{X_C}[\hat{f}(x_S, X_C)] = \int f(x_S, x_C)d\mathbb{P}(x_C),
-\end{equation}
+\textit{M-Plots (Marginal Plots)} try to address this issue by considering the
+conditional distribution of the remaining features given the feature of interest
+but instead suffer from the omitted variable
+bias~\cite{apley_visualizing_2020,friedman_greedy_2001}.
 
-\noindent where $X_C$ is the complement feature subset. $PDP_{\hat f, S}$ is a
-function of $x_S$ and can be estimated by Monte Carlo integration:
+The \textit{Accumulated Local Effects (ALE)} plot~\cite{apley_visualizing_2020}
+addresses both issues by accumulating local differences in model predictions
+along the feature of interest, computing conditional expectations within small
+intervals rather than across the entire feature range.
 
-\begin{equation}\label{eq:pdp-estimate}
-    \widehat{PDP}_{\hat f, S}(x_S) = \frac{1}{n} \sum_{i=1}^{n} \hat{f}(x_S, x_C^{(i)}).
-\end{equation}
+Alternative approaches include \textit{functional ANOVA (fANOVA)}, which
+decomposes feature effects into main and interaction
+effects~\cite{hooker_discovering_2004}. Recent extensions have further
+addressed limitations of these classical methods. For example, \textit{Robust
+    and Heterogeneity-aware ALE (RHALE)}~\cite{gkolemis_rhale_2023} adds
+heterogeneity quantification to ALE and improving robustness, or
+\textit{Accumulated Total Derivative Effect (ATDEV)} plots can be decomposed
+into ALE and \textit{Accumulated Cross Effects (ACE)}~\cite{liu_model_2018}.
 
-\noindent Here, $x_C^{(i)}$ are the actual complement feature values from the dataset of $n$ instances.
-To plot this function, a grid of $G$ grid points
-$\{(x_S^{(g)}, \widehat{PD}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.
-Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.
+Beyond these global feature effect methods, there are regional effect plots
+such as \textit{REPID}~\cite{herbinger_repid_2022}, and local methods like
+\textit{ICE (Individual Conditional Expectation)}
+curves~\cite{goldstein_peeking_2015} or SHAP dependence
+plots~\cite{lundberg_local_2020}.
 
-The PDP assumes that the features in $S$ are independent of the features in
-$C$. If this is violated, the perturbations may produce unrealistic data points
-outside the underlying joint distribution of the data. This extrapolation issue
-can cause misleading
-interpretations~\cite{molnar_interpretable_2022,molnar_general_2022}.\\
-
-\noindent The \textit{Accumulated Local Effects (ALE)} plot is an alternative to the PDP that
-solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation above,
-for $|S|=1$, the ALE plot is defined as
-
-\begin{eqnarray}
-    ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S}
-    \left[\hat{f}^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant} \\
-    &=& \int_{x_{\text{min},s}}^{x_S} \int_{x_C}
-    \hat{f}^S(z_S, x_C)\mathbb{P}(x_C|z_S)dx_{C}dz_{S} - \text{constant},
-\end{eqnarray}
-
-\noindent where $\hat{f}^S(x_S, x_C) = \frac{\partial \hat{f}(x_S, x_C)}{\partial x_S}$.
-The constant is chosen so that $\widehat{ALE}_{\hat f,S}(X_S)$ is centered with a mean of $0$
-w.r.t.\ the marginal distribution of $X_S$. The uncentered ALE can be estimated by
-
-\begin{equation}\label{eq:ale-estimate-uncentered}
-    \widehat{\widetilde{ALE}}_{\hat f, S}(x) =
-    \sum_{k=1}^{k_S(x)} \frac{1}{n_S(k)} \sum_{i:x_S^{(i)} \in N_S(k)}
-    \left[\hat f(z_{k,S}, x_{C}^{(i)}) - \hat f(z_{k-1,S}, x_{C}^{(i)})\right].
-\end{equation}
-
-\noindent Here, $\{N_S(k) = (z_{k-1,S}, z_{k,S}]\}_{k=1}^{K}$ partitions the samples
-$\{x^{(i)}_S\}_{i=1}^n$ into $K$ intervals or neighborhoods $N_S(k)$. $n_S(k)$ denotes
-the number of observations in the $k$th interval $N_S(k)$, $k_S(x)$ represents the index
-of the interval to which a particular value $x$ of feature $x_S$ belongs.
-The uncentered ALE is centered by
-
-\begin{equation}\label{eq:ale-estimate-centered}
-    \widehat{ALE}_{\hat f, S}(x) =
-    \widehat{\widetilde{ALE}}_{\hat f, S}(x)
-    - \frac{1}{n} \sum_{i=1}^n \widehat{\widetilde{ALE}}_{\hat f, S}(x_S^{(i)})
-\end{equation}
-
-\noindent to have a mean effect of $0$. For the grid that defines the intervals,
-the quantiles of the empirical distribution of $\{x^{(i)}_S\}_{i=1}^n$ can be
-used~\cite{apley_visualizing_2020}.\\
-
-\noindent Other feature effect methods include the \textit{M-Plot (Marginal Plot)},
-which, however, suffers from the omitted variable
-bias~\cite{apley_visualizing_2020,friedman_greedy_2001},
-or \textit{functional ANOVA (fANOVA)}, which decomposes feature effects
-into main and interaction effects~\cite{hooker_discovering_2004}.
-
-Furthermore, methods exist that extend previous ones, such as \textit{Robust
-    and Heterogeneity-aware ALE (RHALE)}~\cite{gkolemis_rhale_2023}, or
-\textit{Accumulated Total Derivative Effect (ATDEV)} plots, which can be
-decomposed into ALE and \textit{Accumulated Cross Effects
-    (ACE)}~\cite{liu_model_2018}.
-
-In addition to these global feature effect methods, there are regional effect
-plots such as \textit{REPID}~\cite{herbinger_repid_2022}, as well as local
-methods, including \textit{ICE (Individual Conditional Expectation)}
-curves~\cite{goldstein_peeking_2015} or SHAP dependence plots
-(e.g.,~\cite{molnar_interpretable_2022}) based on SHAP
-values~\cite{lundberg_unified_2017}.
-
-For the remainder of this paper, we will focus on PDP and ALE as the most
-popular global feature effect methods and refer to them when speaking of
+In this paper, we focus on PDP and ALE and refer to them when speaking of
 feature effects.
 
-\subsection{Feature Effect Error Decomposition}
+\paragraph{Feature Effect Error and Uncertainty.}
+Multiple works have approached measuring uncertainty in feature effects. For
+probabilistic ML models, Moosbauer et al.\cite{moosbauer_explaining_2021}
+derived model-specific confidence bands for PDPs, while applied studies have
+proposed bootstrap-based
+approaches\cite{esselman_landscape_2015,grange_using_2019}. While the former
+are not model-agnostic, the latter often capture only the variance introduced
+by Monte Carlo approximation. Nonetheless, the model variance is another source
+of uncertainty in PDPs and ALEs, and accounting for it requires multiple model
+fits~\cite{apley_visualizing_2020,molnar_general_2022}.
 
-To quantify the error of a computed feature effect, a ``ground truth'' needs to
-be defined first. We follow the approach of Molnar et
-al.~\cite{molnar_relating_2023} and define ground truth versions of PDP and ALE
-directly on the data generating process (DGP) by applying PDP and ALE to the
-underlying ground truth function $f$ (instead of model $\hat f$).
+Molnar et al.~\cite{molnar_relating_2023} give formalizations of PDP (and PFI)
+as statistical estimators of ground truth estimands, demonstrate the
+decomposition of its mean squared error (MSE) into model bias, model variance,
+and Monte Carlo variance, and provide estimators for both Monte Carlo and
+overall variance. Our work builds upon and extends this idea.
 
-For PDP, we can directly use the definition of Molnar et
-al.~\cite{molnar_relating_2023}:
+\paragraph{Data Choice for Feature Effect Estimation.}
+For many interpretability methods, the choice whether to compute explanations
+in-sample (on training data) or out-of-sample (on validation data) can
+significantly impact interpretations: For loss-based methods such as
+\textit{Permutation Feature Importance (PFI)
+}\cite{breiman_random_2001,fisher_all_2019}, this choice is crucial and has
+been extensively studied (e.g., in~\cite{molnar_general_2022}). Similar
+concerns have been identified for other explainability methods: both the
+\textit{Mean Decrease in Impurity (MDI)} of Random Forests and \textit{SHAP}
+values have been shown to potentially exhibit biases when computed on training
+data~\cite{loecher_debiasing_2022,loecher_debiasing_2024}.
 
-\begin{definition}[Definition 1 from~\cite{molnar_relating_2023}]
-    The PDP ground truth is the PDP applied to function
-    $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$
-    of the data generating process.
+For feature effect methods, however, the implications of this choice remain
+largely unexplored. The original works introducing
+PDP~\cite{friedman_greedy_2001} and ALE~\cite{apley_visualizing_2020}, as well
+as general introductory literature on Interpretable
+ML~\cite{molnar_interpretable_2022}, predominantly use training data without
+explicit justification. In contrast, practitioners often advocate for using
+holdout data or base their choice on practical constraints such as dataset
+size\footnote{for examples, see
+    \url{https://github.com/SauceCat/PDPbox/issues/68} and
+    \url{https://forums.fast.ai/t/partial-dependence-plot/98465} (both accessed
+    10/27/2024)}. A too large dataset can increase computation times substantially,
+particularly for PDPs~\cite{friedman_greedy_2001}. Moreover, Molnar et
+al.~\cite{molnar_relating_2023} estimate the PDP on holdout data when aiming to
+quantify the variance of feature effect estimates. Nonetheless, a systematic
+study on the implications of the data choice for feature effect estimation is
+missing so far.
 
-    \begin{equation}
-        PDP_{f,S}(x_S) = \mathbb{E}_{X_C}[f(x_S,X_C)]
-    \end{equation}
-\end{definition}
+\subsection{Test Functions for Simulation Studies}\label{sec:test-functions}
 
-As stated by Molnar et al.~\cite{molnar_relating_2023}, their results also
-apply to conditional variants of the PDP such as ALE. We now make this
-definition explicit:
-
-\begin{definition}
-    The ALE ground truth is the ALE applied to function $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$ of the data generating process.
-
-    \begin{equation}
-        ALE_{f,S}(x_S) = \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S} \left[f^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant}
-    \end{equation}
-
-    \noindent where $f^S(x_S, x_C) = \frac{\partial f(x_S, x_C)}{\partial x_S}$ and \text{constant} chosen such that the effect has a mean of $0$ w.r.t. the marginal distribution of $X_S$.
-\end{definition}
-
-%With these definitions, $\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$
-%can now be treated as statistical estimators of the ground truth feature effects
-%(cf.~\cite{molnar_relating_2023}). 
-Note that different ground truth effects may also be defined, and our choices
-come with certain implications and limitations, such as omitting the
-\textit{aggregation bias}\footnote{for details,
-    see~\cite{herbinger_repid_2022}}~\cite{mehrabi_survey_2021}.
-
-With more complex ground truth functions $f$, it may become increasingly
-difficult to derive the ground truth feature effects analytically, especially
-for ALE. In these cases, we therefore propose to also estimate those effects by
-Monte Carlo integration, yielding $\widehat{PDP}_{f,S}(x_S)$ and
-$\widehat{ALE}_{f,S}(x_S)$ (obtained by plugging in $f$ instead of $\hat f$
-into the estimators in equations (\ref{eq:pdp-estimate}) and
-(\ref{eq:ale-estimate-uncentered}) / (\ref{eq:ale-estimate-centered})).\\
-
-\noindent Summarizing, we have now defined four quantities per feature effect:
-$PDP_{f,S}$ $\widehat{PDP}_{f,S}$, $PDP_{\hat f,S}$, and $\widehat{PDP}_{\hat f,S}$
-(analogue for ALE). We can now define different errors between each of these
-quantities. In this paper, we focus on the MSE, as it can be decomposed into
-bias and variance (see e.g.~\cite{geman_neural_1992}).
-Taking, for example, $PDP_{f,S}$ as ground truth, we can define the MSE of
-$PDP_{\hat f,S}$ at a point $x_S$ as follows~\cite{molnar_relating_2023}:
-
-\begin{equation}
-    \text{MSE}(x_S; PDP_{f,S}, PDP_{\hat f,S})
-    = \mathbb{E}_F[{(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f,S}(x_S))}^2]
-\end{equation}
-\begin{equation}
-    = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f},S}(x_S)])}^2}_{Bias^2} + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance}
-\end{equation}
-
-\noindent Here, $F$ denotes the distribution of trained models. The bias
-is linked to the bias of the model, the variance comes from the variance
-in the model fits (randomness in training data, randomness in model training procedure).
-
-Since we usually cannot determine $PDP_{\hat f,S}$, we need to estimate it by
-Monte Carlo integration, yielding $\widehat{PDP}_{\hat f,S}(x_S)$. This,
-however, introduces an additional variance term (we use the random variable
-$X_{mc}$ for the Monte Carlo samples (e.g., training or validation data)):
-
-\begin{equation}
-    \begin{split}
-        \text{MSE}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S})
-        = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f}, S}(x_S)])}^2}_{Bias^2} \\
-        + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance} + \underbrace{\mathbb{E}_F\text{Var}_{X_{mc}}[\widehat{PDP}_{\hat{f},S}(x_S)]}_{MC-Variance}
-    \end{split}
-\end{equation}
-
-\begin{proof}
-    For better readability, we will omit the subscript $S$ as well as the point $x_S$ and use $X=X_{mc}$ in this proof:
-
-    \begin{align*}
-        \text{MSE}(PDP_{f}, \widehat{PDP}_{\hat f})
-         & = \mathbb{E}_F\mathbb{E}_X[(PDP_f - \widehat{PDP}_{\hat f})^2]                                                                                         \\
-         & = \mathbb{E}_F \mathbb{E}_X[PDP_f^2 - 2PDP_f\widehat{PDP}_{\hat f} + \widehat{PDP}_{\hat f}^2]                                                         \\
-         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_{\hat f}^2]                                                      \\
-         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}] + \mathbb{E}_F[\mathbb{E}_X[\widehat{PDP}_{\hat f}]^2] \\
-         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}] + \text{Var}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}])   \\
-         & \quad + \mathbb{E}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}])^2                                                                                           \\
-         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] +  Var_F[PDP_{\hat f}] + \mathbb{E}_F[PDP_{\hat f}]^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]  \\
-         & = (PDP_f - \mathbb{E}_F[PDP_{\hat f}])^2 + \text{Var}_F[PDP_{\hat f}] + \mathbb{E}_F[\text{Var}_X(\widehat{PDP}_{\hat f})]
-    \end{align*}
-
-    \noindent At multiple points, we use the fact that $\mathbb{E}_X[\widehat{PDP}_{\hat f}]
-        = PDP_{\hat f}$ (cf.~\cite{molnar_relating_2023}).
-\end{proof}
-
-\noindent We see that the variance due to MC integration also depends on the model
-distribution $F$. Similarly, one could use the estimate $\widehat{PDP}_{f,S}$
-as groundtruth, introducing an additional variance term $Var_{X_{mc2}}$when
-estimated on different MC sample (proof in
-\textsc{Appendix~\ref{app:proof-mc-variance}}).
-An overview of all error terms in this chain can be found in
-\textbf{Fig.\@~\ref{fig:error-graph}}.\\
-
-\begin{figure}[t]
-    \includegraphics[width=\textwidth]{img/error_graph.pdf}
-    \caption{Error chain in feature effect estimation
-        (modified, original version can be found in~\cite{molnar_relating_2023})}\label{fig:error-graph}
-\end{figure}
-
-\noindent $\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
-multiple models of the same inducer fitted to $M$ different training data
-sets sampled independently from the DGP. We propose the following estimators:
-\begin{equation}
-    \widehat{\text{MSE}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
-    \label{eq:mse-estimator}
-\end{equation}
-\begin{equation}
-    \widehat{\text{Bias}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = (PDP_{f,S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat{f}^{(m)},S}(x_S))
-    \label{eq:bias-estimator}
-\end{equation}
-\begin{equation}
-    \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) =
-    \frac{1}{M-1}\sum_{m=1}^M\left(\widehat{PDP}_{\hat f^{(m)},S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat f^{(m)},S}(x_S)\right)^2
-    \label{eq:variance-estimator}
-\end{equation}
-
-\noindent Note that these are similar to the approach in~\cite{molnar_relating_2023},
-but we do not specify which data points to use for MC integration. The
-variance captures both the variance in the model fits and the variance due to
-MC integration. To estimate the MC variance, we propose the following estimators:
-\begin{equation}
-    \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))^2
-\end{equation}
-
-\noindent and
-\begin{equation}
-    \begin{split}
-        \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
-        \left(\widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S) - \frac{1}{K}\sum_{k=1}^K \widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S)\right)^2
-    \end{split}
-\end{equation}
-
-\noindent For more convenient analysis of the errors, one could also
-aggregate them over the marginal distribution of $X_S$ (e.g.,
-estimated by averaging over the grid points if chosen appropriately)
-to obtain a single error measure per feature effect.
-
-While our definitions are based on the PDP, they can be directly applied to the
-ALE as well.
-
-\section{Test Functions for Simulation Studies}\label{sec:test-functions}
-
-Test functions play a crucial role in research, e.g.\ for evaluating and
-comparing different methodological approaches, or when conducting simulation
-studies. This section synthesizes commonly used test functions across various
-domains, providing structured guidance for researchers --- particularly those
-in Interpretable ML --- in selecting appropriate test functions for their
+Test functions play a crucial role in research, e.g.\ for evaluating different
+methodological approaches, or when conducting simulation studies. In the
+following, we synthesize commonly used test functions across various domains,
+providing structured guidance for researchers --- particularly those in
+Interpretable ML --- in selecting appropriate test functions for their
 simulation studies. By examining test functions from different fields and their
-purposes of application, we aim to facilitate experimental design decisions.
-While this overview is not exhaustive, it highlights key test functions and
-their characteristics to help researchers make informed choices for their
-specific research needs.
+purposes of application, we aim to facilitate experimental design decisions
+rather than giving an exhaustive overview.
 
 \paragraph{Test Functions in Optimization.}
 The field of optimization, where test functions are essential to enable the
@@ -412,35 +245,32 @@ Optimization Benchmark (BBOB), offering a structured approach to testing
 continuous optimization algorithms through artificial test
 functions~\cite{hansen_coco_2016}. These classical test function suites are
 well-established in optimization and may also serve as a basis for
-Interpretable ML researchers. However, it is important to note that the ability
-of these artifical test functions to represent complex real-world behavior is
+Interpretable ML researchers. However, the ability of these artifical test
+functions to represent complex real-world behavior is often
 limited~\cite{zaefferer_simulation-based_2017}.
 
 \paragraph{Physics-Inspired Test Functions.}
 
 Physics-derived functions offer a compelling source of real-world test cases,
-with the Feynman Symbolic Regression Database (FSReD) being a prominent
-example. FSReD comprises 100 physics equations from the seminal
-\textit{Feynman's Lectures on Physics (34--36)}, supplemented by 20 more
-challenging equations from other seminal physics texts~\cite{udrescu_ai_2020}.
-These equations span diverse physics domains including classical mechanics,
-electromagnetism, and quantum mechanics. They involve between one and nine
-independent variables and incorporate various elementary functions such as
-arithmetic operations, trigonometric functions, and exponentials. From that,
-tabular datasets were generated through random sampling from defined value
-ranges.
+with the \textit{Feynman Symbolic Regression Database
+    (FSReD)}~\cite{udrescu_ai_2020} being a prominent example. FSReD comprises 100
+physics equations from the seminal \textit{Feynman's Lectures on Physics
+    (34--36)}, supplemented by 20 more challenging equations from other seminal
+physics texts. These equations span diverse physics domains and involve a
+varying number of variables and various elementary functions such as arithmetic
+operations, trigonometric functions, and exponentials. Tabular datasets are
+generated through random sampling from defined value ranges.
 
-Building upon this foundation,
 Matsubara~et~al.~\cite{matsubara_rethinking_2024} addressed several limitations
-of the original FSReD. Their enhanced framework introduces a three-tiered
-categorization of problems (easy, medium, hard) based on their complexity,
-incorporates dummy variables to simulate irrelevant features, and implements
-more realistic sampling ranges and strategies. Detailed specifications for all
-formulas, including their sampling parameters, are available in their work.
+of the original FSReD. They introduce a three-tiered categorization of problems
+(easy, medium, hard) based on their complexity, incorporate dummy variables to
+simulate irrelevant features, and implement more realistic sampling ranges and
+strategies. Detailed specifications for all formulas, including their sampling
+parameters, are available in their work.
 
 While initially developed for symbolic regression tasks, many Feynman equations
 may serve as suitable test functions for simulation studies in Interpretable
-ML. Their basis in physical principles provides real-world relevance, though
+ML. Their basis in physical principles provides real-world relevance, though  % chktex 13
 researchers should carefully select equations that align with their specific
 analytical objectives and complexity requirements.
 
@@ -485,6 +315,217 @@ variables, the presence of specific challenges such as correlation between
 features or interactions, the need for analytical solutions for validation, as
 well as the relevance to real-world applications in the domain of interest.
 
+\section{Background}\label{sec:background}
+
+\subsection{Feature Effects}
+
+The \textit{Partial Dependence Plot (PDP)} by
+Friedman~\cite{friedman_greedy_2001} describes the marginal effect of one or
+two features on the prediction of a model $\hat f$. For a feature set $X_S$
+(with $S \subseteq \{1,\ldots,p\}$, $|S| = 1$ or $|S| = 2$), the PDP is defined
+as
+
+\begin{equation}
+    PDP_{\hat f, S} = \mathbb{E}_{X_C}[\hat{f}(x_S, X_C)] = \int f(x_S, x_C)d\mathbb{P}(x_C),
+\end{equation}
+
+\noindent where $X_C$ is the complement feature subset. $PDP_{\hat f, S}$ is a
+function of $x_S$ and can be estimated by Monte Carlo integration:
+
+\begin{equation}\label{eq:pdp-estimate}
+    \widehat{PDP}_{\hat f, S}(x_S) = \frac{1}{n} \sum_{i=1}^{n} \hat{f}(x_S, x_C^{(i)}).
+\end{equation}
+
+\noindent Here, $x_C^{(i)}$ are the actual complement feature values from the dataset of $n$ instances.
+To plot this function, a grid of $G$ grid points
+$\{(x_S^{(g)}, \widehat{PD}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.  % chktex 3
+Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.\\
+
+\noindent The \textit{Accumulated Local Effects (ALE)} plot is an alternative to the PDP that
+solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation above,
+for $|S|=1$, the ALE plot is defined as
+
+\begin{eqnarray}
+    ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S}
+    \left[\hat{f}^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant} \\
+    &=& \int_{x_{\text{min},s}}^{x_S} \int_{x_C}
+    \hat{f}^S(z_S, x_C)\mathbb{P}(x_C|z_S)dx_{C}dz_{S} - \text{constant},
+\end{eqnarray}
+
+\noindent where $\hat{f}^S(x_S, x_C) = \frac{\partial \hat{f}(x_S, x_C)}{\partial x_S}$.
+The constant is chosen so that $\widehat{ALE}_{\hat f,S}(X_S)$ is centered with a mean of $0$
+w.r.t.\ the marginal distribution of $X_S$. The uncentered ALE can be estimated by
+
+\begin{equation}\label{eq:ale-estimate-uncentered}
+    \widehat{\widetilde{ALE}}_{\hat f, S}(x) =
+    \sum_{k=1}^{k_S(x)} \frac{1}{n_S(k)} \sum_{i:x_S^{(i)} \in N_S(k)}
+    \left[\hat f(z_{k,S}, x_{C}^{(i)}) - \hat f(z_{k-1,S}, x_{C}^{(i)})\right].
+\end{equation}
+
+\noindent Here, $\{N_S(k) = (z_{k-1,S}, z_{k,S}]\}_{k=1}^{K}$ partitions the samples  % chktex 3 chktex 9
+$\{x^{(i)}_S\}_{i=1}^n$ into $K$ intervals or neighborhoods $N_S(k)$. $n_S(k)$ denotes  % chktex 3
+the number of observations in the $k$th interval $N_S(k)$, $k_S(x)$ represents the index
+of the interval to which a particular value $x$ of feature $x_S$ belongs.
+The uncentered ALE is centered by
+
+\begin{equation}\label{eq:ale-estimate-centered}
+    \widehat{ALE}_{\hat f, S}(x) =
+    \widehat{\widetilde{ALE}}_{\hat f, S}(x)
+    - \frac{1}{n} \sum_{i=1}^n \widehat{\widetilde{ALE}}_{\hat f, S}(x_S^{(i)})
+\end{equation}
+
+\noindent to have a mean effect of $0$. For the grid that defines the intervals,
+the quantiles of the empirical distribution of $\{x^{(i)}_S\}_{i=1}^n$ can be  % chktex 3
+used~\cite{apley_visualizing_2020}.\\
+
+\subsection{Feature Effect Error Decomposition}
+
+To quantify the error of a computed feature effect, a ``ground truth'' needs to
+be defined first. We follow the approach of Molnar et
+al.~\cite{molnar_relating_2023} and define ground truth versions of PDP and ALE
+directly on the data generating process (DGP) by applying PDP and ALE to the
+underlying ground truth function $f$ (instead of model $\hat f$).
+
+For PDP, we can directly use the definition of Molnar et
+al.~\cite{molnar_relating_2023}:
+
+\begin{definition}[Definition 1 from~\cite{molnar_relating_2023}]
+    The PDP ground truth is the PDP applied to function
+    $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$
+    of the data generating process.
+
+    \begin{equation}
+        PDP_{f,S}(x_S) = \mathbb{E}_{X_C}[f(x_S,X_C)]
+    \end{equation}
+\end{definition}
+
+As stated by Molnar et al.~\cite{molnar_relating_2023}, their results also
+apply to conditional variants of the PDP such as ALE. We now make this  % chktex 13
+definition explicit:
+
+\begin{definition}
+    The ALE ground truth is the ALE applied to function $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$ of the data generating process.
+
+    \begin{equation}
+        ALE_{f,S}(x_S) = \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S} \left[f^S(X_S, X_C)|X_S = z_S\right] dz_S - \text{constant}
+    \end{equation}
+
+    \noindent where $f^S(x_S, x_C) = \frac{\partial f(x_S, x_C)}{\partial x_S}$ and \text{constant} chosen such that the effect has a mean of $0$ w.r.t.\ the marginal distribution of $X_S$.
+\end{definition}
+
+%With these definitions, $\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$
+%can now be treated as statistical estimators of the ground truth feature effects
+%(cf.~\cite{molnar_relating_2023}). 
+Note that different ground truth effects may also be defined, and our choices
+come with certain implications and limitations, such as omitting the
+\textit{aggregation bias}\footnote{for details,
+    see~\cite{herbinger_repid_2022}}~\cite{mehrabi_survey_2021}.
+
+With more complex ground truth functions $f$, it may become increasingly
+difficult to derive the ground truth feature effects analytically, especially
+for ALE. In these cases, we therefore propose to also estimate those effects by  % chktex 13
+Monte Carlo integration, yielding $\widehat{PDP}_{f,S}(x_S)$ and
+$\widehat{ALE}_{f,S}(x_S)$ (obtained by plugging in $f$ instead of $\hat f$
+into the estimators in equations (\ref{eq:pdp-estimate}) and
+(\ref{eq:ale-estimate-uncentered}) / (\ref{eq:ale-estimate-centered})).\\
+
+\noindent Summarizing, we have now defined four quantities per feature effect:
+$PDP_{f,S}$ $\widehat{PDP}_{f,S}$, $PDP_{\hat f,S}$, and $\widehat{PDP}_{\hat f,S}$
+(analogue for ALE). We can now define different errors between each of these
+quantities. In this paper, we focus on the MSE, as it can be decomposed into
+bias and variance (see e.g.~\cite{geman_neural_1992}).
+Taking, for example, $PDP_{f,S}$ as ground truth, we can define the MSE of
+$PDP_{\hat f,S}$ at a point $x_S$ as follows~\cite{molnar_relating_2023}:
+
+\begin{equation}
+    \text{MSE}(x_S; PDP_{f,S}, PDP_{\hat f,S})
+    = \mathbb{E}_F[{(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f,S}(x_S))}^2]
+\end{equation}
+\begin{equation}
+    = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f},S}(x_S)])}^2}_{Bias^2} + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance}
+\end{equation}
+
+\noindent Here, $F$ denotes the distribution of trained models. The bias
+is linked to the bias of the model, the variance comes from the variance
+in the model fits (randomness in training data, randomness in model training procedure).
+
+Since we usually cannot determine $PDP_{\hat f,S}$, we need to estimate it by
+Monte Carlo integration, yielding $\widehat{PDP}_{\hat f,S}(x_S)$. This,
+however, introduces an additional variance term (we use the random variable
+$X_{mc}$ for the Monte Carlo samples (e.g., training or validation data)):
+
+\begin{equation}
+    \begin{split}
+        \text{MSE}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S})
+        = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f}, S}(x_S)])}^2}_{Bias^2} \\
+        + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance} + \underbrace{\mathbb{E}_F\text{Var}_{X_{mc}}[\widehat{PDP}_{\hat{f},S}(x_S)]}_{MC-Variance}
+    \end{split}
+\end{equation}
+
+\begin{proof}
+    Using basic expectation and variance rules, as well as applying the fact that
+    $\mathbb{E}_X[\widehat{PDP}_{\hat f}] = PDP_{\hat f}$ (cf.~\cite{molnar_relating_2023})
+    gives the proof. The full proof is provided in
+    \textsc{Appendix~\ref{app:proof-mse-decomposition}}.
+\end{proof}
+
+\noindent We see that the variance due to MC integration also depends on the model
+distribution $F$. Similarly, one could use the estimate $\widehat{PDP}_{f,S}$
+as groundtruth, introducing an additional variance term $Var_{X_{mc2}}$when
+estimated on different MC sample (proof in
+\textsc{Appendix~\ref{app:proof-mc-variance}}).
+An overview of all error terms in this chain can be found in
+\textbf{Fig.\@~\ref{fig:error-graph}}.\\
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{img/error_graph.pdf}
+    \caption{Error chain in feature effect estimation
+        (modified, original version can be found in~\cite{molnar_relating_2023})}\label{fig:error-graph}
+\end{figure}
+
+\noindent $\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
+multiple models of the same inducer fitted to $M$ different training data
+sets sampled independently from the DGP. We propose the following estimators:  % chktex 13
+\begin{equation}
+    \widehat{\text{MSE}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
+    \label{eq:mse-estimator}
+\end{equation}
+\begin{equation}
+    \widehat{\text{Bias}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = (PDP_{f,S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat{f}^{(m)},S}(x_S))
+    \label{eq:bias-estimator}
+\end{equation}
+\begin{equation}
+    \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) =
+    \frac{1}{M-1}\sum_{m=1}^M{\left(\widehat{PDP}_{\hat f^{(m)},S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat f^{(m)},S}(x_S)\right)}^2
+    \label{eq:variance-estimator}
+\end{equation}
+
+\noindent Note that these are similar to the approach in~\cite{molnar_relating_2023},
+but we do not specify which data points to use for MC integration. The
+variance captures both the variance in the model fits and the variance due to
+MC integration. To estimate the MC variance, we propose the following estimators:
+\begin{equation}
+    \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K{(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))}^2
+    \label{eq:mc-variance-estimator-groundtruth}
+\end{equation}
+
+\noindent and
+\begin{equation}
+    \begin{split}
+        \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
+        {\left(\widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S) - \frac{1}{K}\sum_{k=1}^K \widehat{PDP}_{\hat f^{(m)},S}^{(k)}(x_S)\right)}^2
+    \end{split}
+    \label{eq:mc-variance-estimator-model}
+\end{equation}
+
+\noindent For more convenient analysis of the errors, one could also
+aggregate them over the marginal distribution of $X_S$ (e.g.,
+estimated by averaging over the grid points if chosen appropriately)
+to obtain a single error measure per feature effect.
+
+While our definitions are based on the PDP, they can be directly applied to the
+ALE as well.
+
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
 To address the research question of which data to choose to estimate feature
@@ -525,13 +566,13 @@ distinct datasets of varying complexity for our simulation study:
           with seven uniformly distributed features between 0 and 1, all mutually
           independent:
           \begin{equation}
-              f_2(\boldsymbol{x}) = 10 \sin(\pi x_1 x_2) + 20(x_3 - \frac{1}{2})^2 + 10 x_4 + 5 x_5
+              f_2(\boldsymbol{x}) = 10 \sin(\pi x_1 x_2) + 20{(x_3 - \frac{1}{2})}^2 + 10 x_4 + 5 x_5
           \end{equation}
           This dataset includes a mix of linear and different non-linear effects with
           interactions.
     \item \textbf{Feynman I.29.16} is based on the Feynman equation I.29.16
           describing wave interference, comprising six independent features. Using
-          the refined sampling strategies from Matsubara et al. \cite{matsubara_rethinking_2024},
+          the refined sampling strategies from Matsubara et al.~\cite{matsubara_rethinking_2024},
           two log-uniformly distributed variables on $[0.1, 10]$, two angles uniformly
           distributed over $[0, 2\pi]$, and two uniformly distributed dummy variables on [0,1]:
           \begin{equation}
@@ -567,9 +608,9 @@ paradigms:
 and tuned on a different dataset for optimal tuning. Details on the hyperparameters and performances
 of the models can be found in \textsc{Appendix~\ref{app:model-hps-perf}}.
 
-\paragraph{Feature Effect Estimation.}
-For the trained models, we estimate the feature effects 
-$\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$ per feature using
+\paragraph{Feature effect estimation.}
+For the trained models, we estimate the feature effects $\widehat{PDP}_{\hat{f},S}$
+and $\widehat{ALE}_{\hat f,S}$ per feature using
 equations~(\ref{eq:pdp-estimate}) and (\ref{eq:ale-estimate-uncentered}). For
 Monte Carlo integration, we use for each the full training and validation set
 as well as a cross-validation strategy. In the latter case, we use a 5-fold
@@ -587,7 +628,7 @@ after estimation to have a mean effect of $0$ w.r.t.\ the grid points, and we
 omit the first and the last grid point after estimation to avoid boundary
 effects especially occuring in ALE plots.
 
-\paragraph{Feature Effect Errors.} To quantify the error of the estimated feature effects, we compute the MSE of
+\paragraph{Feature effect errors.} To quantify the error of the estimated feature effects, we compute the MSE of
 the estimated model feature effects with respect to the estimated ground truth
 features effects, as well as their bias and variance. For that, we use the
 estimators defined in equations~(\ref{eq:mse-estimator}) to
@@ -600,10 +641,162 @@ errors into a single measure per feature effect, we average the errors over the
 marginal distribution of $X_S$ by averaging over the grid points.
 
 \subsection{Ablation Experiments}\label{sec:experiment-ablation}
-\dots
+
+As described earlier, we conduct two ablation studies for more detailed
+insights into the Monte Carlo variance.
+
+\paragraph{Variance decomposition study.} The variance of the feature effects estimated with the procedure described in
+the main experiment \textsc{Section~\ref{sec:experiment-main}} consists of two
+components: the model variance and the variance due to the Monte Carlo
+integration. To disentangle these two sources of variance, we aim to
+additionally estimate the Monte Carlo variance using the estimator in
+equation~(\ref{eq:mc-variance-estimator-model}). This allows us to substract it
+from the total variance estimated in the main experiment and obtain the model
+variance, giving more nuanced insights into the implications of the data choice
+on feature effect estimation. To obtain this estimate, we maintain the set-up
+of the main experiment but for each trained model $\hat f^{(m)}$ (plus five
+models from CV $\hat f^{(m,1)} - \hat f^{(m,5)}$), we draw $K=30$ new training
+and validation sets from the DGP and estimate the feature effects on these sets
+plus in a cross-validated manner with the already fitted models. This allows us
+to estimate the Monte Carlo variance as in
+equation~(\ref{eq:mc-variance-estimator-model}). Since this study is
+computationally more expensive, we do this only for XGBoost (OT and OF) with
+the same datasets and sizes as in the main experiment.
+
+\paragraph{Impact of dataset size on Monte Carlo variance.} To investigate the impact of the dataset size on the Monte Carlo variance, we
+estimate the Monte Carlo variance between the analytical ground truth feature
+effects and the estimated ground truth feature effects on different dataset
+sizes. As estimator for the Monte Carlo variance, we use
+equation~(\ref{eq:mc-variance-estimator-groundtruth}). With this approach, we
+entirely omit the model and thus eliminate other error sources such as model
+bias and variance (as with a perfect model fit). To estimate the ground truth
+feature effects, we use 50 different dataset sizes ranging from $10^1$ to
+$10^6$ on a logarithmic scale. Note that we only consider the
+SimpleNormalCorrelated and Friedman1 datasets for this study as an analytical
+computation of the FeynmanI.29.16 feature effects is infeasible. For other
+details, we maintain the set-up of the main experiment.
 
 \section{Results}\label{sec:results}
 
+\subsection{Main Experiment}
+
+We give the results of the main experiment error decomposition for the SimpleNormalCorrelated
+dataset in \textbf{Fig.\@~\ref{fig:pdp-results-snc}} for PDP and \textbf{Fig.\@~\ref{fig:ale-results-snc}}
+for ALE. The full results for all datasets, models, and features can be found in  % chktex 13
+\textsc{Appendix~\ref{app:additional-results}}.
+
+Generally, we observe that the feature effect error is in the most cases highest when
+the effect is estimated on validation data. For ALE, this observation is more pronounced
+than for PDP. This increase in error is mainly due to an increase in variance (see e.g.,  % chktex 13
+\textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-ot}} or \textbf{Fig.\@~\ref{fig:ale-results-snc-xgboost-of}}).
+For many models, the feature effect error is lowest when estimated in a cross-validated manner.
+This is slightly more pronounced for overfitting models (OF) than for optimally tuned models (OT),
+and is mainly due to a decrease in variance (see e.g., \textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-of}}
+and \textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-ot}}). Since the variance composes of the model variance
+and the Monte Carlo variance, both could be reduced by cross-validation. Monte Carlo variance
+may decrease as we have slightly more samples overall than in the training set. Conversely,
+the model variance may decrease as it is averaged out through the cross-validation procedure,
+which may especially improve overfitting models that have a higher model variance.
+We investigate these hypotheses in an ablation study in \textsc{Section~\ref{sec:results-variance-decomposition}}.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF}
+        \label{fig:pdp-results-snc-gam-of}  % chktex 24
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT}
+        \label{fig:pdp-results-snc-gam-ot}  % chktex 24
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF}
+        \label{fig:pdp-results-snc-xgboost-of}  % chktex 24
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT}
+        \label{fig:pdp-results-snc-xgboost-ot}  % chktex 24
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT}
+        \label{fig:pdp-results-snc-svm-ot}  % chktex 24
+    \end{subfigure}
+    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset.\dots}
+    \label{fig:pdp-results-snc}  % chktex 24
+\end{figure}
+
+Interestingly, for ALE, we observe for some cases an increased bias when estimating the feature effects on
+validation data and via cross-validation compared to an estimation on training data (see e.g.,
+\textbf{Fig.\@~\ref{fig:ale-results-snc-xgboost-ot}} and \textbf{Fig.\@~\ref{fig:ale-results-snc-svm-ot}}).
+Note that this is only the case when errors are generally low, and the bias is still small in absolute terms.
+Since this only occurs for ALE and only for the smaller dataset size (1000 training samples, 250 validation samples),
+we hypothesize that this is due to our approach of choosing the intervals based on theoretical quantiles.
+For the smaller validation sets, we may have intervals with few or no samples, leading to a bias in the
+estimation of the effect. This hypothesis is supported by the fact that the increase in bias only occurs
+in regions with low sample density, which we demonstrate in \textsc{Appendix~\ref{app:main-study-further-investigation}}.
+Thus, an open question remains whether choosing the intervals based on the empirical quantiles mitigates this issue.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF}
+        \label{fig:ale-results-snc-gam-of}  % chktex 24
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT}
+        \label{fig:ale-results-snc-gam-ot}  % chktex 24
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF}
+        \label{fig:ale-results-snc-xgboost-of}  % chktex 24
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT}
+        \label{fig:ale-results-snc-xgboost-ot}  % chktex 24
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT}
+        \label{fig:ale-results-snc-svm-ot}  % chktex 24
+    \end{subfigure}
+    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset.\dots}
+    \label{fig:ale-results-snc}  % chktex 24
+\end{figure}
+
+Further results on Friedman1 and Feynman I.29.16, as well as for the dummy features, largely confirm
+the described findings. For details, we refer to \textsc{Appendix~\ref{app:additional-results}}. We only
+observe one case where the error of ALE is substantially larger when estimated on training data
+due to a high bias. This occurs for the XGBoost\_OF model on the Friedman1 dataset, which we further
+look into in \textsc{Appendix~\ref{app:main-study-further-investigation}}.
+
+\subsection{Ablation Study Results: Variance Decomposition}\label{sec:results-variance-decomposition}
+
+\dots
+
+\subsection{Ablation Study Results: Impact of Dataset Size on Monte Carlo Variance}\label{sec:results-dataset-size}
+
+\clearpage
 \section{Conclusions}\label{sec:conclusion}
 
 \subsection{Summary \& Discussion}
@@ -628,21 +821,49 @@ marginal distribution of $X_S$ by averaging over the grid points.
 % appendix
 \newpage
 \appendix
-\section{Proof: Monte Carlo Variance for Groundtruth}\label{app:proof-mc-variance}
+\section{Proof: Decomposition of MSE}\label{app:proof-mse-decomposition}
+
 \begin{proof}
-    For better readability, we will omit the subscript $S$ as well as the point $x_S$ and use $X=X_{mc}$ in this proof:
+    Let $X$ denote a random variable for the Monte Carlo samples used to estimate the feature effect.
+    For better readability, we will omit the subscript $S$ as well as the point $x_S$ in this proof:
 
     \begin{align*}
-        \mathbb{E}_F\mathbb{E}_X[(PDP_f - \widehat{PDP}_f)^2] & = \mathbb{E}_F\mathbb{E}_X[PDP_f^2 - 2PDP_f \widehat{PDP}_f + \widehat{PDP}_f^2]                                 \\
-                                                              & = PDP_f^2 - 2PDP_f \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f^2]       \\
-                                                              & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + \mathbb{E}_F[\mathbb{E}_X[\widehat{PDP}_f]^2] \\
-                                                              & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + PDP_f^2                                       \\
-                                                              & = \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f]                                                                      \\
-                                                              & = \text{Var}_X[\widehat{PDP}_f]
+        \text{MSE}(PDP_{f}, \widehat{PDP}_{\hat f})
+         & = \mathbb{E}_F\mathbb{E}_X[{(PDP_f - \widehat{PDP}_{\hat f})}^2]                                                             \\
+         & = \mathbb{E}_F \mathbb{E}_X[PDP_f^2 - 2PDP_f\widehat{PDP}_{\hat f} + \widehat{PDP}_{\hat f}^2]                               \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_{\hat f}^2]                            \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]                              \\
+         & \quad + \mathbb{E}_F[\mathbb{E}_X{[\widehat{PDP}_{\hat f}]}^2]                                                               \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]                              \\
+         & \quad + \text{Var}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}]) + \mathbb{E}_F{(\mathbb{E}_X[\widehat{PDP}_{\hat f}])}^2          \\
+         & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] +  Var_F[PDP_{\hat f}]                                                          \\
+         & \quad + \mathbb{E}_F{[PDP_{\hat f}]}^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]                                    \\
+         & = {(PDP_f - \mathbb{E}_F[PDP_{\hat f}])}^2 + \text{Var}_F[PDP_{\hat f}] + \mathbb{E}_F[\text{Var}_X(\widehat{PDP}_{\hat f})]
+    \end{align*}
+
+    \noindent At multiple points, we use the fact that $\mathbb{E}_X[\widehat{PDP}_{\hat f}]
+        = PDP_{\hat f}$ (cf.~\cite{molnar_relating_2023}).
+        \qed\
+\end{proof}
+
+\section{Proof: Monte Carlo Variance for Groundtruth}\label{app:proof-mc-variance}
+\begin{proof}
+    Let $X$ denote a random variable for the Monte Carlo samples used to estimate the feature effect.
+    For better readability, we will omit the subscript $S$ as well as the point $x_S$ in this proof:
+
+    \begin{align*}
+        \text{MSE}(PDP_{f}, \widehat{PDP}_{f}) & = \mathbb{E}_F\mathbb{E}_X[{(PDP_f - \widehat{PDP}_f)}^2]                                                          \\
+                                               & = \mathbb{E}_F\mathbb{E}_X[PDP_f^2 - 2PDP_f \widehat{PDP}_f + \widehat{PDP}_f^2]                                   \\
+                                               & = PDP_f^2 - 2PDP_f \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f] + \mathbb{E}_F\mathbb{E}_X[\widehat{PDP}_f^2]         \\
+                                               & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + \mathbb{E}_F[\mathbb{E}_X{[\widehat{PDP}_f]}^2] \\
+                                               & = PDP_f^2 - 2PDP_f^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f] + PDP_f^2                                         \\
+                                               & = \mathbb{E}_F\text{Var}_X[\widehat{PDP}_f]                                                                        \\
+                                               & = \text{Var}_X[\widehat{PDP}_f]
     \end{align*}
 
     \noindent Again we use $\mathbb{E}_X[\widehat{PDP}_{f}] = PDP_{f}$ (cf.~\cite{molnar_relating_2023}) as well as the fact
     that all quantities based on $f$ do not depend on the model distribution $F$.
+    \qed\
 \end{proof}
 
 \section{Model Hyperparameters and Performance}\label{app:model-hps-perf}
@@ -667,7 +888,7 @@ of 10000 to get a reliable performance estimate. While this scenario is
 unrealistic in practice, it allows as to consider hyperparameters as
 ``pre-selected'' and avoid costly nested resampling strategies for the
 simulation study. Each model was tuned for 200 trials using a
-\textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra_algorithms_2011}
+\textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra2011algorithms}
 using validation MSE as objective to minimize (equivalent to maximizing
 R2-score).
 
@@ -679,49 +900,49 @@ R2-score).
         \midrule
         \multirow[t]{14}{=}{\textbf{Simple                                                                                                                                                                                                                                                                     \\Normal\\Correlated}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF} & n\_bases: 50; lam: 0.0005;  \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 20; lam: 15.6807;                                                                                                                                                                       \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 800; gamma: 10;                                                                                                                                                                                \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 917.9061; gamma: 0.0030;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@800; gamma: 10;                                                                                                                                                                                \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@917.9061; gamma: 0.0030;                                                                                                                                                                       \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1200; max\_depth: 16; learning\_rate: 0.35; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                           \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 1640; max\_depth: 5; learning\_rate: 0.0062; subsample: 0.5601; min\_child\_weight: 1.6999; colsample\_bytree: 0.7632; colsample\_bylevel: 0.6944; lambda: 0.0156; alpha: 0.0660;  \\
         \cline{2-4}
         \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 64; lam: 1e-05;                                                                                                                                                                         \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 5; lam: 0.0010;                                                                                                                                                                         \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 10;                                                                                                                                                                               \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 864.4724; gamma: 0.0085;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@1000; gamma: 10;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@864.4724; gamma: 0.0085;                                                                                                                                                                       \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1500; max\_depth: 18; learning\_rate: 0.4000; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                         \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 2586; max\_depth: 5; learning\_rate: 0.0044; subsample: 0.9484; min\_child\_weight: 1.4257; colsample\_bytree: 0.8471; colsample\_bylevel: 0.8672; lambda: 5.1002; alpha: 0.0026;  \\
         \cline{1-4}
         \multirow[t]{14}{=}{\textbf{Friedman1}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF}     & n\_bases: 50; lam: 0.0001;                                                                                                                                                                        \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 21; lam: 0.0402;                                                                                                                                                                        \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 15;                                                                                                                                                                               \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 917.1949; gamma: 0.2102;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@1000; gamma: 15;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@917.1949; gamma: 0.2102;                                                                                                                                                                       \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 2621; max\_depth: 8; learning\_rate: 0.0335; subsample: 0.6192; min\_child\_weight: 5.4066; colsample\_bytree: 0.7651; colsample\_bylevel: 0.5224; lambda: 11.6021; alpha: 4.5342; \\
         \cline{2-4}
         \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 80; lam: 1e-08;                                                                                                                                                                         \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 22; lam: 0.0657;                                                                                                                                                                        \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 1000; gamma: 18;                                                                                                                                                                               \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 901.1903; gamma: 0.2602;                                                                                                                                                                       \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@1000; gamma: 18;                                                                                                                                                                               \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@901.1903; gamma: 0.2602;                                                                                                                                                                       \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1200; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 3691; max\_depth: 5; learning\_rate: 0.0070; subsample: 0.6643; min\_child\_weight: 1.4075; colsample\_bytree: 0.8403; colsample\_bylevel: 0.8186; lambda: 0.0399; alpha: 5.0734;  \\
         \cline{1-4}
         \multirow[t]{14}{=}{\textbf{Feynman                                                                                                                                                                                                                                                                    \\I.29.16}} & \multirow[t]{7}{*}{\textbf{1000}} & \textbf{GAM\_OF} & n\_bases: 50; lam: 0.0001;  \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 31; lam: 0.3260;                                                                                                                                                                        \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 200; gamma: 8;                                                                                                                                                                                 \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 11.4317; gamma: 0.1394;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@200; gamma: 8;                                                                                                                                                                                 \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@11.4317; gamma: 0.1394;                                                                                                                                                                        \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 4246; max\_depth: 9; learning\_rate: 0.0327; subsample: 0.8004; min\_child\_weight: 6.3792; colsample\_bytree: 0.8420; colsample\_bylevel: 0.8357; lambda: 14.1131; alpha: 6.0556; \\
         \cline{2-4}
         \textbf{}                               & \multirow[t]{7}{*}{\textbf{8000}} & \textbf{GAM\_OF}     & n\_bases: 64; lam: 5e-07;                                                                                                                                                                         \\
         \textbf{}                               & \textbf{}                         & \textbf{GAM\_OT}     & n\_bases: 32; lam: 0.4500;                                                                                                                                                                        \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C: 400; gamma: 10;                                                                                                                                                                                \\
-        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C: 22.5167; gamma: 0.1114;                                                                                                                                                                        \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OF}     & C:\@400; gamma: 10;                                                                                                                                                                                \\
+        \textbf{}                               & \textbf{}                         & \textbf{SVM\_OT}     & C:\@22.5167; gamma: 0.1114;                                                                                                                                                                        \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OF} & n\_estimators: 1000; max\_depth: 14; learning\_rate: 0.3; subsample: 1.0; min\_child\_weight: 1; colsample\_bytree: 1.0; colsample\_bylevel: 1.0; lambda: 0; alpha: 0;                            \\
         \textbf{}                               & \textbf{}                         & \textbf{XGBoost\_OT} & n\_estimators: 3962; max\_depth: 7; learning\_rate: 0.0372; subsample: 0.9351; min\_child\_weight: 4.0962; colsample\_bytree: 0.8640; colsample\_bylevel: 0.7728; lambda: 29.2036; alpha: 5.1631; \\
         \bottomrule
     \end{tabularx}
     \caption{Hyperparameters for the models used in the simulation study}
-    \label{tab:model-hyperparameters}
+    \label{tab:model-hyperparameters}  % chktex 24
 \end{table}
 
 \subsection{Model Performance Evaluation}
@@ -738,10 +959,412 @@ linear regression model serves only as a baseline. The overfitted SVM (SVM\_OF)
 show substantially worse performances on test data compared to the other
 models. Therefore, we excluded it from further analysis.
 
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{img/model_performance_SimpleNormalCorrelated.png}
+        \caption{Model performances on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{img/model_performance_Friedman1.png}
+        \caption{Model performances on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{img/model_performance_FeynmanI.29.16.png}
+        \caption{Model performances on Feynman I.29.16}
+    \end{subfigure}
+    \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right). Each boxplot aggregates 30 repetitions with differing seeds for the data generation (cf. \textsc{Section~\ref{sec:experiment-main}}).}
+    \label{fig:model-performance}  % chktex 24
+\end{figure*}
+
+\clearpage
+\section{Additional Main Experiment Results}\label{app:additional-results}
+
+\subsection{SimpleNormalCorrelated Dataset}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[h!]
+    \ContinuedFloat\
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_O PDP results on SimpleNormalCorrelatedT}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset. $x_3$ and $x_4$ are dummy variables.}
+    \label{fig:pdp-results-snc-all}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[h!]
+    \ContinuedFloat\
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.67\textwidth]{img/SNC-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset. $x_3$ and $x_4$ are dummy variables.}
+    \label{fig:ale-results-snc-all}  % chktex 24
+\end{figure*}
+
+\clearpage
+\subsection{Friedman1 Dataset}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on Friedman1}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat\
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on Friedman1}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on Friedman1 dataset. $x_6$ and $x_7$ are dummy variables.}
+    \label{fig:pdp-results-friedman1}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[h!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on Friedman1}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat\
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on Friedman1}
+    \end{subfigure}
+    \caption{Main experiment results for ALE on Friedman1 dataset. $x_6$ and $x_7$ are dummy variables.}
+    \label{fig:ale-results-friedman1}  % chktex 24
+\end{figure*}
+
+\clearpage
+\subsection{Feynman I.29.16 Dataset}
+
+\begin{figure*}[ht!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_LinReg.png}
+        \caption{LinReg PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_GAM_OF.png}
+        \caption{GAM\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_GAM_OT.png}
+        \caption{GAM\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat\
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_SVM_OF.png}
+        \caption{SVM\_OF PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_pdp_SVM_OT.png}
+        \caption{SVM\_OT PDP results on FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Main experiment results for PDP on FeynmanI.29.16 dataset. $d_1$ and $d_2$ are dummy variables.}
+    \label{fig:pdp-results-feynman}  % chktex 24
+\end{figure*}
+
+\begin{figure*}[ht!]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_LinReg.png}
+        \caption{LinReg ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_GAM_OF.png}
+        \caption{GAM\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_GAM_OT.png}
+        \caption{GAM\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \ContinuedFloat\
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_SVM_OF.png}
+        \caption{SVM\_OF ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=0.86\textwidth]{img/FeynmanI.29.16-all/feature_effect_errors_ale_SVM_OT.png}
+        \caption{SVM\_OT ALE results on FeynmanI.29.16}
+    \end{subfigure}
+    \label{fig:ale-results-feynman}  % chktex 24
+    \caption{Main experiment results for ALE on FeynmanI.29.16 dataset. $d_1$ and $d_2$ are dummy variables.}
+\end{figure*}
+
+\clearpage
+\section{Further Investigation of Main Experiment Results}\label{app:main-experiment-further-investigation}
+
 \begin{figure}
-    \includegraphics[width=\textwidth]{img/model_performances.png}
-    \caption{R2-score of the models on training (left) and holdout test data (right), each boxplot aggregates 30 repetitions}
-    \label{fig:model-performance}
+    \centering
+    \includegraphics[width=0.5\textwidth]{img/further_investigation/snc_pdp_XGBoost_OF_1000.png}
+    \caption{$\text{Bias}^2$ and variance per grid point for PDP of XGBoost\_OF on SimpleNormalCorrelated dataset with $n_{train} = 1000$.
+    This example demonstrates the cross-validation reduces the variance mainly in regions where data is scarce, i.e.,
+    at the edges of the feature space. In this regions, the model has only few data points to learn from, and approximations
+    of the feature effect may be less reliable.}
+    \label{fig:further-pdp-xgb-snc}  % chktex 24
 \end{figure}
 
-\end{document}
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/further_investigation/feynman_ale_SVM_OT_1000.png}
+    \caption{$\text{Bias}^2$ and variance per grid point for ALE of SVM\_OT on FeynmanI.29.16 dataset with $n_{train} = 1000$.
+    This example shows that the higher bias on validation data and in the cross-validated scenario for ALE mainly occurs in regions
+    where data is scarce. For $x_1$ and $x_2$, the marginals are log-uniformly distributed, which leads to a lower density of data points
+    in the higher ranges of the features, for which the bias increases. This supports our hypothesis that the bias is due to our
+    theoretical-quantile-based inteval selection, where intervals to the right may empirically contain few to no data points.}
+    \label{fig:further-ale-svm-feynman}  % chktex 24
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{img/further_investigation/friedman1_ale_XGBoost_OF_8000.png}
+    \caption{$\text{Bias}^2$ and variance per grid point for ALE of XGBoost\_OF on Friedman1 dataset with $n_{train} = 8000$.
+    For all features, the bias when estimated on training data is substantially larger than in the other scenarios. The bias
+    is largest mostly on the limits of the feature ranges, and seems to be influenced by the shape of the function.
+    Note that we do not observe this behavior for the corresponding PDP, nor for other datasets and models. 
+    }
+    \label{fig:further-ale-xgb-friedman}  % chktex 24
+\end{figure}
+
+
+\end{document}  % chktex 17
