@@ -14,7 +14,7 @@ import seaborn as sns
 # from sklearn.base import BaseEstimator
 # from scipy.stats import pearsonr, spearmanr
 
-from current_research_feature_effects.feature_effects import FeatureEffect
+from current_research_feature_effects.feature_effects import FeatureEffect, compute_theoretical_effects
 from current_research_feature_effects.data_generating.data_generation import Groundtruth
 from current_research_feature_effects.plotting.utils import (
     set_style,
@@ -384,14 +384,18 @@ def plot_mcvariance_over_features(
     feature_names: List[str],
     title: Optional[str] = None,
     sharey: bool = False,
+    groundtruth: Optional[Groundtruth] = None,
+    large_font: bool = False,
+    save_figs: None | Path = None,
 ) -> plt.Figure:
     """
-    Plot Monte Carlo variance over features for different sample sizes.
+    Plot Monte Carlo variance over features for different sample sizes, optionally with groundtruth.
 
     This function creates a series of line plots, each representing the Monte Carlo
     variance of a feature effect estimate across different sample sizes. The x-axis
     represents the feature values, while the y-axis represents the Monte Carlo variance.
-    Different sample sizes are represented by different colors.
+    Different sample sizes are represented by different colors. If groundtruth is provided,
+    it plots the theoretical effect without showing its scale.
 
     Parameters
     ----------
@@ -402,6 +406,14 @@ def plot_mcvariance_over_features(
         A list of feature names to plot.
     title : str, optional
         The title of the plot (default is None).
+    sharey : bool, optional
+        Whether to share y-axes across subplots (default is False).
+    groundtruth : Groundtruth, optional
+        The Groundtruth object to plot theoretical effects (default is None).
+    large_font : bool, optional
+        If True, use larger font sizes (default is False).
+    save_figs : None | Path
+        Path to save the figure (default is None).
 
     Returns
     -------
@@ -410,13 +422,38 @@ def plot_mcvariance_over_features(
     """
     set_style()
     n_feat = len(feature_names)
-    fig, axes = plt.subplots(1, n_feat, figsize=(4 * n_feat, 4), sharey=sharey)
-    fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
+
+    if large_font:
+        _set_fontsize("large")
+    else:
+        _set_fontsize("standard")
+
+    # Create figure with extra space on right for colorbar
+    fig = plt.figure(figsize=(4 * n_feat + 0.5, 4))
+
+    # Create a grid of subplots, leaving space for colorbar
+    gs = fig.add_gridspec(1, n_feat + 1, width_ratios=[1] * n_feat + [0.1])
+    axes = [fig.add_subplot(gs[0, i]) for i in range(n_feat)]
+    cax = fig.add_subplot(gs[0, -1])  # colorbar axis
+
+    if title is not None:
+        fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
+
+    # Plot MC variance
+    n_samples = list(mc_variance_data.keys())
+    norm = colors.LogNorm(vmin=min(n_samples), vmax=max(n_samples))
+    cmap = cm.viridis
+
+    if groundtruth is not None:
+        groundtruth_effect = compute_theoretical_effects(
+            groundtruth,
+            mc_variance_data[n_samples[0]].effect_type,
+            feature_names,
+            [mc_variance_data[n_samples[0]].features[feature]["grid"] for feature in feature_names],
+            center_curves=True,
+        )
 
     for feature, ax in zip(feature_names, axes):
-        n_samples = list(mc_variance_data.keys())
-        norm = colors.LogNorm(vmin=min(n_samples), vmax=max(n_samples))
-        cmap = cm.viridis
         for n in n_samples:
             color = cmap(norm(n))
             ax.plot(
@@ -431,11 +468,38 @@ def plot_mcvariance_over_features(
                 color=color,
             )
         ax.set_title(f"MC Variance ${feature}$")
-        ax.set_xlabel(feature)
+        ax.set_xlabel(f"${feature}$")
         ax.set_ylabel("MC Variance")
 
+        # Add groundtruth if provided
+        if groundtruth is not None:
+            ax2 = ax.twinx()
+            ax2.plot(
+                groundtruth_effect.features[feature]["grid"],
+                groundtruth_effect.features[feature]["effect"],
+                color="grey",
+                linestyle="--",
+                label="groundtruth",
+            )
+            ax2.set_yticklabels([])
+            ax2.set_ylabel('')
+            ax2.grid(False)
+            ax2.legend(loc="upper center")
+
+    if sharey:
+        y_min = min(ax.get_ylim()[0] for ax in axes)
+        y_max = max(ax.get_ylim()[1] for ax in axes)
+        for ax in axes:
+            ax.set_ylim(y_min, y_max)
+
     sm = cm.ScalarMappable(norm=norm, cmap=cmap)
-    plt.colorbar(sm, ax=axes[-1], label="$n_{mc}$")
+    plt.colorbar(sm, cax=cax, label="$n_{mc}$")
+
+    plt.tight_layout()
+
+    if save_figs is not None:
+        effect_type = list(mc_variance_data.values())[0].effect_type
+        fig.savefig(save_figs / f"mc_variance_{effect_type}.png", bbox_inches="tight")
 
     return fig
 
@@ -447,6 +511,8 @@ def plot_mcvariance_mean(
     sharey: bool = False,
     xscale: Literal["linear", "log"] = "linear",
     yscale: Literal["linear", "log"] = "log",
+    large_font: bool = False,
+    save_figs: None | Path = None,
 ) -> plt.Figure:
     """
     Plot the mean Monte Carlo variance over features for different sample sizes.
@@ -470,6 +536,10 @@ def plot_mcvariance_mean(
         The scale of the x-axis (default is 'linear').
     yscale : {'linear', 'log'}, optional
         The scale of the y-axis (default is 'log').
+    large_font : bool, optional
+        If True, use larger font sizes (default is False).
+    save_figs : None | Path
+        Path to save the figure (default is None).
 
     Returns
     -------
@@ -477,12 +547,20 @@ def plot_mcvariance_mean(
         A Figure object containing the generated plots.
     """
     set_style()
+    palette = sns.color_palette("Set2")
+
+    if large_font:
+        _set_fontsize("large")
+    else:
+        _set_fontsize("standard")
+
     n_feat = len(feature_names)
     fig, axes = plt.subplots(
         1,
         n_feat,
-        figsize=(4 * n_feat, 4),
+        figsize=(5 * n_feat, 5),
         sharey=sharey,
+        dpi=300,
     )
     fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
 
@@ -490,11 +568,17 @@ def plot_mcvariance_mean(
         means = []
         for k in mc_variance_data.keys():
             means.append(np.mean(mc_variance_data[k].features[feature]["effect"]))
-        ax.plot(mc_variance_data.keys(), means, marker="+")
+        ax.plot(mc_variance_data.keys(), means, marker="+", color=palette[4])
         ax.set_yscale(yscale)
         ax.set_xscale(xscale)
         ax.set_title(f"Mean MC Variance ${feature}$")
         ax.set_xlabel("$n_{mc}$")
         ax.set_ylabel("Mean MC Variance")
+
+    plt.tight_layout()
+
+    if save_figs is not None:
+        effect_type = list(mc_variance_data.values())[0].effect_type
+        fig.savefig(save_figs / f"mean_mc_variance_{effect_type}.png", bbox_inches="tight")
 
     return fig
