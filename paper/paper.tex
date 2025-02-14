@@ -660,8 +660,9 @@ and validation sets from the DGP and estimate the feature effects on these sets
 plus in a cross-validated manner with the already fitted models. This allows us
 to estimate the Monte Carlo variance as in
 equation~(\ref{eq:mc-variance-estimator-model}). Since this study is
-computationally more expensive, we do this only for XGBoost (OT and OF) with
-the same datasets and sizes as in the main experiment.
+computationally more expensive, we do this only for XGBoost (OT and OF), which
+is arguably the most practically relevant model in our set-up. We use the same
+datasets and sizes as in the main experiment.
 
 \paragraph{Impact of dataset size on Monte Carlo variance.} To investigate the impact of the dataset size on the Monte Carlo variance, we
 estimate the Monte Carlo variance between the analytical ground truth feature
@@ -697,7 +698,7 @@ and the Monte Carlo variance, both could be reduced by cross-validation. Monte C
 may decrease as we have slightly more samples overall than in the training set. Conversely,
 the model variance may decrease as it is averaged out through the cross-validation procedure,
 which may especially improve overfitting models that have a higher model variance.
-We investigate these hypotheses in an ablation study in \textsc{Section~\ref{sec:results-variance-decomposition}}.
+We further investigate these hypotheses in \textsc{Section~\ref{sec:results-variance-decomposition}}.
 
 \begin{figure}[htbp]
     \centering
@@ -788,14 +789,84 @@ Further results on Friedman1 and Feynman I.29.16, as well as for the dummy featu
 the described findings. For details, we refer to \textsc{Appendix~\ref{app:additional-results}}. We only
 observe one case where the error of ALE is substantially larger when estimated on training data
 due to a high bias. This occurs for the XGBoost\_OF model on the Friedman1 dataset, which we further
-look into in \textsc{Appendix~\ref{app:main-study-further-investigation}}.
+look into in \textsc{Appendix~\ref{app:main-study-further-investigation}}. Also note that the we observe
+no substantial differences between scenarios with correlated features (SimpleNormalCorrelated) and
+independent features (Friedman1, Feynman I.29.16).
 
 \subsection{Ablation Study Results: Variance Decomposition}\label{sec:results-variance-decomposition}
 
-\dots
+We use the variance results from the main experiment and the Monte Carlo variance estimated in the ablation study
+to show the decomposition of the feature effect variance into model variance and Monte Carlo variance. The results
+for the Friedman1 dataset are given in \textbf{Fig.\@~\ref{fig:pdp-variance-decomp}} for PDP and
+\textbf{Fig.\@~\ref{fig:ale-variance-decomp}} for ALE. The full results including the other datasets are  % chktex 13
+provided in \textsc{Appendix~\ref{app:additional-variance-decomposition}}.
 
-Finally, we also observe that the Monte Carlo variance --- as expected --- reduced with larger dataset size.
-We investigate this effect further in the next ablation study.
+We observe that the Monte Carlo variance is generally highest when the feature effects are estimated on the smaller
+validation set, which aligns with our expectations.
+Computing the feature effects in a cross-validated manner leads to the lowest Monte Carlo variance with a substantial
+reduction compared to estimation solely on training or validation data.
+
+In addition, we observe that while the model variance is naturally nearly the same for training and validation data,
+it is also reduced in many cases when estimating the feature effects in a
+cross-validated manner. This is especially pronounced for the overfitting models (OF) and is best visible for PDP
+(\textbf{Fig.\@~\ref{fig:pdp-variance-decomp}}). These observations are in line with our previous hypothesis that
+reduces both model variance by averaging over different models as well as Monte Carlo variance by averaging over
+different samples. This is especially beneficial for overfitting models, which have a higher model variance.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/variance_decomposition_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/variance_decomposition_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP on Friedman1}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on Friedman1 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. The second linear feature
+    ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time.}
+    \label{fig:pdp-variance-decomp}  % chktex 24
+\end{figure}
+
+While the variance due to MC integration is only a minor component of the total variance for PDP, it is the
+dominant component for ALE. Only for feature effect estimation via cross-validation, the Monte Carlo variance  % chktex 13
+is again reduced to a negligible level. This suggests that ALE is more sensitive to the dataset size than PDP,
+which we further investigate in \textsc{Section~\ref{sec:results-dataset-size}}. We also suspect a certain
+amount of inaccuracy in the Monte Carlo variance estimation for ALE, which (a) leads to differences in the
+model variance between training and validation set and (b) causes the model variance to be negative in some cases
+(see \textbf{Fig.\@\ref{fig:ale-variance-decomp}}).
+Naturally, this is not possible, and can most likely be attributed to numerical inaccuracies in the MC variance estimation.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/variance_decomposition_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/variance_decomposition_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE on Friedman1}
+    \end{subfigure}
+    \caption{Variance decomposition results for ALE on Friedman1 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. The second linear feature
+    ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time. Negative variances are
+    due to numerical inaccuracies, marked by the hatch pattern.}
+    \label{fig:ale-variance-decomp}  % chktex 24
+\end{figure}
+
+For both PDP and ALE, we find that the Monte Carlo variance, as expected, reduces with larger dataset size.
+This becomes clear both when comparing training and validation data and when comparing the two dataset sizes
+(1000 and 8000 samples). To analyze this not only for these few dataset sizes, we dedicate a separate
+ablation study to investigate this further in the next section.
 
 \subsection{Ablation Study Results: Impact of Dataset Size on Monte Carlo Variance}\label{sec:results-dataset-size}
 
@@ -1022,7 +1093,7 @@ models. Therefore, we excluded it from further analysis.
         \includegraphics[width=0.9\textwidth]{img/model_performance_FeynmanI.29.16.png}
         \caption{Model performances on Feynman I.29.16}
     \end{subfigure}
-    \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right). Each boxplot aggregates 30 repetitions with differing seeds for the data generation (cf. \textsc{Section~\ref{sec:experiment-main}}).}
+    \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right). Each boxplot aggregates 30 repetitions with differing seeds for the data generation (cf.\ \textsc{Section~\ref{sec:experiment-main}}).}
     \label{fig:model-performance}  % chktex 24
 \end{figure*}
 
@@ -1409,7 +1480,140 @@ models. Therefore, we excluded it from further analysis.
 \end{figure}
 
 \clearpage
+\section{Additional Results for Ablation Study: Variance Decomposition}\label{app:additional-variance-decomposition}
+
+\subsection{SimpleNormalCorrelated Dataset}
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC-all/variance_decomposition_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC-all/variance_decomposition_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on SimpleNormalCorrelated dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time.}
+    \label{fig:pdp-variance-decomp-snc}  % chktex 24
+\end{figure}
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC-all/variance_decomposition_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE on SimpleNormalCorrelated}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.75\textwidth}
+        \includegraphics[width=\textwidth]{img/SNC-all/variance_decomposition_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE on SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on SimpleNormalCorrelated dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time. Negative variances are
+    due to numerical inaccuracies, marked by the hatch pattern.}
+    \label{fig:ale-variance-decomp-snc}  % chktex 24
+\end{figure}
+
+\clearpage
+\subsection{Friedman1 Dataset}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img/Friedman1-all/variance_decomposition_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img/Friedman1-all/variance_decomposition_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP on Friedman1}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on Friedman1 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time.}
+    \label{fig:pdp-variance-decomp-friedman1}  % chktex 24
+\end{figure}
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img/Friedman1-all/variance_decomposition_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE on Friedman1}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{\textwidth}
+        \includegraphics[width=\textwidth]{img/Friedman1-all/variance_decomposition_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE on Friedman1}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on Friedman1 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time. Negative variances are
+    due to numerical inaccuracies, marked by the hatch pattern.}
+    \label{fig:ale-variance-decomp-friedman1}  % chktex 24
+\end{figure}
+
+\clearpage
+\subsection{Feynman I.29.16 Dataset}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.9\textwidth}
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_pdp_XGBoost_OF.png}
+        \caption{XGBoost\_OF PDP on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.9\textwidth}
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_pdp_XGBoost_OT.png}
+        \caption{XGBoost\_OT PDP on FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on FeynmanI.29.16 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time.}
+    \label{fig:pdp-variance-decomp-feynman}  % chktex 24
+\end{figure}
+
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.9\textwidth}
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_ale_XGBoost_OF.png}
+        \caption{XGBoost\_OF ALE on FeynmanI.29.16}
+    \end{subfigure}
+    \\[10pt]
+    \vfill
+    \begin{subfigure}[b]{0.9\textwidth}
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_ale_XGBoost_OT.png}
+        \caption{XGBoost\_OT ALE on FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Variance decomposition results for PDP on FeynmanI.29.16 dataset. Variance is taken from the
+    main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
+    obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
+    on 8000 training samples were not obtained due to excessive computation time. Negative variances are
+    due to numerical inaccuracies, marked by the hatch pattern.}
+    \label{fig:ale-variance-decomp-feynman}  % chktex 24
+\end{figure}
+
+
+\clearpage
 \section{Additional Results for Ablation Study: Datasize Impact on Monte Carlo Variance}\label{app:additional-mc-results}
+
+\subsection{Aggregated Results}
 
 \begin{figure*}[h!]
     \centering
@@ -1450,6 +1654,9 @@ models. Therefore, we excluded it from further analysis.
     Note that $x_6$ and $x_7$ are dummy features.}
     \label{fig:mean-mc-variance-friedman1}  % chktex 24
 \end{figure*}
+
+\clearpage
+\subsection{Results per Grid Point}
 
 \begin{figure*}[h!]
     \centering
