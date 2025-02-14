@@ -307,6 +307,70 @@ def plot_feature_effect_error_table(
     plt.show()
 
 
+def plot_variance_table(
+    df: pd.DataFrame,
+    models: List[str],
+    type: Literal["pdp", "ale"],
+    save_figs: None | Path = None,
+    large_font: bool = False,
+    show_title: bool = True,
+):
+    """
+    Plot a table of feature effect variances for different models.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing the aggregated variances.
+    models : List[str]
+        List of model names.
+    type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
+        Type of feature effect, either 'pdp' or 'ale'.
+    save_figs : None | Path
+        Path to save the figure (default is None).
+    large_font : bool
+        If True, use larger font sizes (default is False).
+    show_title : bool
+        If True, show the title of the plot (default is True).
+    """
+    for model in models:
+        if large_font:
+            _set_fontsize("xlarge")
+        else:
+            _set_fontsize("standard")
+
+        g = sns.FacetGrid(
+            df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=0.67
+        )
+        g.map_dataframe(
+            sns.barplot,
+            x="split",
+            y="value",
+            hue="metric",
+            hue_order=["Variance", "Model Variance", "MC Variance"],
+            palette=sns.color_palette("Set2")[2:5],
+        )
+        for ax in g.axes.flat:
+            for bar in ax.patches:
+                if bar.get_height() < 0:
+                    bar.set_hatch('////')
+                    bar.set_edgecolor((0, 0, 0, 0.3))
+        g.set_titles(col_template="${col_name}$", row_template="n_train={row_name}")
+        if show_title:
+            g.fig.suptitle(f"Variance Decomposition {type.upper()} {model}", y=1.02)
+            legend_pos = (0.5, 1.0)
+        else:
+            g.fig.suptitle("", y=1.02)
+            legend_pos = (0.5, 1.05)
+        g.add_legend(loc="upper center", bbox_to_anchor=legend_pos, ncol=3)
+        g.set_ylabels("")
+        plt.tight_layout()
+        if save_figs is not None:
+            g.savefig(save_figs / f"variance_decomposition_{type}_{model}.png", bbox_inches="tight", dpi=300)
+
+    plt.show()
+
+
 def plot_fe_bias_variance(error_dict, sharey=True, large_font=False) -> plt.Figure:
     """
     Plot the bias and variance of the feature effects over the grid points.
@@ -482,7 +546,7 @@ def plot_mcvariance_over_features(
                 label="groundtruth",
             )
             ax2.set_yticklabels([])
-            ax2.set_ylabel('')
+            ax2.set_ylabel("")
             ax2.grid(False)
             ax2.legend(loc="upper center")
 
