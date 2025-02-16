@@ -5,14 +5,9 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-# from matplotlib import transforms
 import matplotlib.colors as colors
 import matplotlib.cm as cm
 import seaborn as sns
-
-# from sklearn.base import BaseEstimator
-# from scipy.stats import pearsonr, spearmanr
 
 from current_research_feature_effects.feature_effects import FeatureEffect, compute_theoretical_effects
 from current_research_feature_effects.data_generating.data_generation import Groundtruth
@@ -21,8 +16,6 @@ from current_research_feature_effects.plotting.utils import (
     get_boxplot_style,
     get_feature_effect_plot_style,
 )
-
-# from current_research_feature_effects.feature_effects import compute_pdps, compute_ales
 
 
 def plot_feature_effect(effect: FeatureEffect | List[FeatureEffect], labels: List[str] = None) -> plt.Figure:
@@ -67,41 +60,71 @@ def plot_feature_effect(effect: FeatureEffect | List[FeatureEffect], labels: Lis
     return fig
 
 
-def plot_groundtruth(groundtruth: Groundtruth, grid_points: Dict[str, np.ndarray], effect_type: Literal["pdp", "ale"]):
+def plot_feature_effect_vs_groundtruth(
+    effect: FeatureEffect,
+    groundtruth: FeatureEffect,
+    feature_names: List[str],
+    large_font: bool = False,
+    save_figs: None | Path = None,
+) -> plt.Figure:
     """
-    Plot the theoretical groundtruth feature effects.
+    Plot feature effects against groundtruth for a given feature effect object.
 
     Parameters
     ----------
-    groundtruth : Groundtruth
-        The Groundtruth object to be plotted.
-    grid_points : Dict[str, np.ndarray]
-        A dictionary containing the grid points for each feature.
-    effect_type : {'pdp', 'ale'}
-        The type of effect to plot, either 'pdp' or 'ale'.
+    effect : FeatureEffect
+        The FeatureEffect object to be plotted.
+    groundtruth : FeatureEffect
+        The FeatureEffect object representing the groundtruth.
+    feature_names : List[str]
+        A list of feature names to plot.
+    large_font : bool, optional
+        If True, use larger font sizes (default is False).
+    save_figs : None | Path
+        Path to save the figure (default is None).
 
     Returns
     -------
     plt.Figure
         A Figure object containing the generated plots.
     """
-    fe = []
-    for feature_name in groundtruth.feature_names:
-        if effect_type == "pdp":
-            effect_func = groundtruth.get_theoretical_partial_dependence(feature_name)
-        elif effect_type == "ale":
-            effect_func = groundtruth.get_theoretical_accumulated_local_effects(feature_name)
+    sns.set(style="ticks")
+    palette = sns.color_palette("Set2")
 
-        fe.append(
-            {
-                "feature": feature_name,
-                "grid_values": grid_points[feature_name],
-                "effect": effect_func(grid_points[feature_name]),
-            }
+    if large_font:
+        _set_fontsize("xlarge")
+    else:
+        _set_fontsize("standard")
+
+    fig, axes = plt.subplots(1, len(feature_names), figsize=(5 * len(feature_names), 5), dpi=300, sharey=True)
+    for i, f in enumerate(feature_names):
+        sns.lineplot(
+            x=effect.features[f]["grid"],
+            y=effect.features[f]["effect"],
+            label=f"{effect.effect_type.upper()} estimate",
+            color=palette[1],
+            ax=axes[i],
+            marker="+",
+            markeredgecolor=palette[1],
         )
 
-    feature_effect = FeatureEffect(effect_type=effect_type, feature_effects=fe)
-    fig = plot_feature_effect(feature_effect)
+        sns.lineplot(
+            x=groundtruth.features[f]["grid"],
+            y=groundtruth.features[f]["effect"],
+            label=f"{groundtruth.effect_type.upper()} theoretical",
+            color=palette[0],
+            ax=axes[i],
+        )
+
+        axes[i].set_xlabel(f"${f}$")
+        axes[i].set_ylabel(f"{effect.effect_type.upper()}")
+        axes[i].legend()
+        sns.despine(ax=axes[i])
+
+    plt.tight_layout()
+
+    if save_figs is not None:
+        fig.savefig(save_figs / f"{effect.effect_type}_groundtruth_comparison.png", bbox_inches="tight")
 
     return fig
 
@@ -145,65 +168,6 @@ def boxplot_model_results(
     fig.tight_layout()
 
     return fig
-
-
-# def plot_effect_comparison(
-#     model: BaseEstimator,
-#     groundtruth: BaseEstimator,
-#     X_train: np.ndarray,
-#     effect: Literal["PDP", "ALE"],
-#     features: List[Literal["x_1", "x_2", "x_3", "x_4", "x_5"]],
-#     groundtruth_feature_effect: Literal["theoretical", "empirical"],
-#     config: ConfigParser,
-# ) -> plt.Figure:
-#     set_style()
-#     if effect == "PDP":
-#         effect_func = compute_pdps
-#         title = "Partial dependence"
-#     elif effect == "ALE":
-#         effect_func = compute_ales
-#         title = "Accumulated local effects"
-#     effects = effect_func(model, X_train, features, config)
-#     if groundtruth_feature_effect == "theoretical":
-#         grid = [effects[i]["grid_values"] for i in range(len(features))]
-#         pdp_groundtruth_functions = [
-#             groundtruth.get_theoretical_partial_dependence(x, feature_distribution="uniform") for x in features
-#         ]
-#         effects_gt = [
-#             {
-#                 "feature": features[i],
-#                 "grid_values": grid[i],
-#                 "effect": [pdp_groundtruth_functions[i](p) for p in grid[i]],
-#             }
-#             for i in range(len(features))
-#         ]
-#     elif groundtruth_feature_effect == "empirical":
-#         effects_gt = effect_func(groundtruth, X_train, features, config)
-#     fig, axes = plt.subplots(1, len(features), figsize=(6 * len(features), 6), dpi=300, sharey=True)
-#     fig.suptitle(f"{title} comparison", fontsize=16, fontweight="bold")
-#     for i in range(len(features)):  # pylint: disable=consider-using-enumerate
-#         if effects[i]["feature"] != features[i]:
-#             raise ValueError(f"Feature {features[i]} does not match {effects[i]['feature']}")
-#         axes[i].plot(
-#             effects[i]["grid_values"],
-#             effects[i]["effect"],
-#             label=model.__class__.__name__,
-#             **get_feature_effect_plot_style(),
-#         )
-#         axes[i].plot(
-#             effects_gt[i]["grid_values"],
-#             effects_gt[i]["effect"],
-#             label="Groundtruth",
-#             **get_feature_effect_plot_style(),
-#         )
-#         axes[i].set_xlabel(f"${effects[i]['feature']}$")
-#         axes[i].set_ylabel(title)
-#         deciles = np.percentile(X_train[:, 0], np.arange(10, 101, 10))
-#         trans = transforms.blended_transform_factory(axes[i].transData, axes[i].transAxes)
-#         axes[i].vlines(deciles, 0, 0.045, transform=trans, color="k", linewidth=1)
-#         axes[i].legend()
-
-#     return fig
 
 
 def _set_fontsize(size: Literal["standard", "large", "xlarge"]) -> None:
@@ -353,7 +317,7 @@ def plot_variance_table(
         for ax in g.axes.flat:
             for bar in ax.patches:
                 if bar.get_height() < 0:
-                    bar.set_hatch('////')
+                    bar.set_hatch("////")
                     bar.set_edgecolor((0, 0, 0, 0.3))
         g.set_titles(col_template="${col_name}$", row_template="n_train={row_name}")
         if show_title:
@@ -492,10 +456,8 @@ def plot_mcvariance_over_features(
     else:
         _set_fontsize("standard")
 
-    # Create figure with extra space on right for colorbar
     fig = plt.figure(figsize=(4 * n_feat + 0.5, 4))
 
-    # Create a grid of subplots, leaving space for colorbar
     gs = fig.add_gridspec(1, n_feat + 1, width_ratios=[1] * n_feat + [0.1])
     axes = [fig.add_subplot(gs[0, i]) for i in range(n_feat)]
     cax = fig.add_subplot(gs[0, -1])  # colorbar axis
@@ -503,7 +465,6 @@ def plot_mcvariance_over_features(
     if title is not None:
         fig.suptitle(title, y=1.02, fontsize=14, fontweight="bold")
 
-    # Plot MC variance
     n_samples = list(mc_variance_data.keys())
     norm = colors.LogNorm(vmin=min(n_samples), vmax=max(n_samples))
     cmap = cm.viridis
@@ -535,7 +496,6 @@ def plot_mcvariance_over_features(
         ax.set_xlabel(f"${feature}$")
         ax.set_ylabel("MC Variance")
 
-        # Add groundtruth if provided
         if groundtruth is not None:
             ax2 = ax.twinx()
             ax2.plot(
