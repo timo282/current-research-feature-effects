@@ -82,7 +82,7 @@ potential biases~\cite{guidotti_survey_2019}, addressing fairness and ethical co
 ~\cite{lipton_mythos_2018}, and ensuring compliance with regulations like the
 EU's General Data Protection Regulation (GDPR)~\cite{gdpr2016} and AI
 Act~\cite{euaia2024}. To address these challenges, the field of Explainable AI
-/ Interpretable ML has emerged~\cite{adadi_peeking_2018}, develping a
+/ Interpretable ML has emerged~\cite{adadi_peeking_2018}, developing a
 wide variety of methods to explain ML models. This includes both model-specific and
 model-agnostic approaches ranging from local feature attributions to global
 feature importances and effects\footnote{For comprehensive overviews of Explainable AI
@@ -112,7 +112,7 @@ choice include potential biases arising from overfitting, the dataset size, and
 computational constraints. Although PDP and ALE are not based on generalization
 error like PFI, it is not studied if and how they are affected by overfitting
 when estimated on training data. In addition, larger datasets may improve the
-feature effect estimates, but also increase computation times.\\
+feature effect estimates but also increase computation times.\\
 
 \noindent In this paper, we aim to answer this largely unaddressed, fundamental
 methodological question of whether to use training or validation data to
@@ -138,7 +138,7 @@ Our main contributions can be summarized as follows:
 grounded recommendations enable practitioners and researchers to make informed
 decisions about which data to choose for feature effect estimation, helping to
 understand potential implications of their choices. Additionally, our framework
-for evaluating feature effects and systematic collection of test functions
+for evaluating feature effects and our systematic collection of test functions
 provide a foundation for future research in Interpretable ML, with the latter
 specifically facilitating test function choice for simulation studies.\\
 
@@ -1251,6 +1251,203 @@ models. Therefore, we excluded it from further analysis.
     \end{subfigure}
     \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right). Each boxplot aggregates 30 repetitions with differing seeds for the data generation (cf.\ \textsc{Section~\ref{sec:experiment-main}}).}
     \label{fig:model-performance}  % chktex 24
+\end{figure*}
+
+\clearpage
+\section{Derivation and Visualization of Analytical Ground Truth Feature Effects}\label{app:ground-truth-feature-effects}
+In the following, we derive the analytical ground truth PDPs and ALEs for the
+considered datasets. In addition, we provide visualizations of the derived
+feature effects and compare them to the estimated feature effects as gut check.
+
+\subsection{SimpleNormalCorrelated Dataset}
+
+\begin{figure*}[h!]
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/pdp_groundtruth_comparison.png}
+        \caption{PDP ground truth of SimpleNormalCorrelated}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/SNC-all/ale_groundtruth_comparison.png}
+        \caption{ALE ground truth of SimpleNormalCorrelated}
+    \end{subfigure}
+    \caption{Ground truth feature effects for SimpleNormalCorrelated dataset. The green line
+    represents the analytically derived ground truth, the orange line the estimated feature
+    effect on the ground truth function using 10000 Monte Carlo samples. Note that both
+    are centered that the average effect at the quantile-based grid points is 0.
+    Since $x_3$ and $x_4$, are dummy variables, they have a constant effect of 0 and are
+    thus omitted.}
+    \label{fig:snc-groundtruth}  % chktex 24
+\end{figure*}
+
+\noindent For SimpleNormalCorrelated, we use normally distributed features with $\mu_1 = 0$,
+$\mu_2 = 0$, $\sigma_1 = 1$, $\sigma_2 = 1$, and correlation
+$\rho = 0.9$. We denote
+arbitrary constants with $C$ and $C^\prime$, respectively.
+
+\begin{align*}
+    PDP_{f,1}(x_1) &= \mathbb{E}_{X_2}[x_1 + \frac{1}{2}X_2^2 + x_1 X_2] \\
+                 &= x_1 + \frac{1}{2} \mathbb{E}_{X_2}[X_2^2] + x_1 \mathbb{E}_{X_2}[X_2] \\
+                 &= x_1 + \frac{1}{2} (Var_{X_2}(X_2) + \mathbb{E}_{X_2}[X_2]^2) + x_1 \mathbb{E}_{X_2}[X_2] \\
+                 &= x_1 + \frac{1}{2} (\sigma_2^2 + \mu_2^2) + x_1 \mu_2 \\
+                 &= x_1 + \frac{1}{2} \\
+                 &= x_1 + C_1
+\end{align*}
+
+\begin{align*}
+    PDP_{f,2}(x_2) &= \mathbb{E}_{X_1}[X_1 + \frac{1}{2}x_2^2 + X_1 x_2] \\
+                    &= \mathbb{E}_{X_1}[X_1] + \frac{1}{2}x_2^2 + \mathbb{E}_{X_1}[X_1] x_2 \\
+                    &= \mu_1 + \frac{1}{2}x_2^2 + \mu_1 x_2 \\
+                    &= \frac{1}{2}x_2^2
+\end{align*}
+
+\begin{align*}
+    ALE_{f,1}(x_1) &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[\frac{\partial}{\partial X_1} X_1 + 0.5 X_2^2 + X_1X_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
+    &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + X_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
+    &(\text{using } X_2 = \beta_{2|1}(X_1-\mu_1) + \varepsilon_1 + \mu_2\text{, where } \beta_{2|1}=\rho \frac{\sigma_2}{\sigma_1}) \\
+    &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + \beta_{2|1}(X_1-\mu_1) + + \varepsilon_1 + \mu_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
+    &= \int_{x_{min,1}}^{x_1} 1 + \beta_{2|1}(z_1-\mu_1) + \mu_2 \,dz_1 - C_1 \\
+    &= [z_1 + \frac{1}{2}\beta_{2|1}(z_1-\mu_1)^2 + \mu_2 z_1]_{x_{min,1}}^{x_1} - C_1 \\
+    &= x_1 + \frac{\beta_{2|1}}{2}(x_1-\mu_1)^2 + \mu_2 x_1 \\
+    & \quad - x_{min,1} - \frac{\beta_{2|1}}{2}(x_{min,1}-\mu_1)^2 - \mu_2 x_{min,1} - C_1 \\
+    % &= (1 + \mu_2) \cdot (x_1 - x_{min,1}) + \frac{\beta_{2|1}}{2} \cdot ((x_1-\mu_1)^2 - (x_{min,1}-\mu_1)^2) - C \\
+    % &= (1 + \mu_2) \cdot (x_1 - x_{min,1}) + \frac{\beta_{2|1}}{2} \cdot (x_1^2 - 2\mu_1 x_1 - x_{min,1}^2 + 2\mu_1 x_{min,1}) - C \\
+    &= (1 + \mu_2) x_1 - (1 + \mu_2) x_{min,1} + \frac{\beta_{2|1}}{2} x_1^2 - \frac{\beta_{2|1}}{2} x_{min,1}^2 \\
+    & \quad - \mu_1 \beta_{2|1} x_1 - \mu_1 \beta_{2|1}  x_{min,1} - C_1 \\
+    &= \frac{\beta_{2|1}}{2} x_1^2 + (1 + \mu_2 - \mu_1 \beta_{2|1}) x_1 - C_1^\prime \\
+    &= 0.45 x_1^2 + x_1 - C_1^\prime
+\end{align*}
+\\
+
+\noindent With anologous calculations, we get:
+
+\begin{align*}
+    ALE_{f,2}(x_2) &= (\frac{1}{2} + \mu_1 + \frac{\beta_{1|2}}{2}) x_2^2 - \beta_{1|2} \mu_2 x_2 - C_2^\prime \\
+    &= 0.95 x_2^2 - C_2^\prime
+\end{align*}
+
+
+\subsection{Friedman1 Dataset}
+
+For Friedman1, we use independent uniformly distributed features between 0
+and 1. Thus, all features $S$ have $\mu_S = \mathbb{E}[X_S]=\frac{a+b}{2}=0.5$ and
+$\sigma_S^2 = Var[X]=\frac{(b-a)^2}{12}=\frac{1}{12}$.
+Si denotes the sine integral function, $C_S$ and $C_S^\prime$ are arbitrary constants.
+
+\begin{align*}
+    PDP_{f,1}(x_1) &= \mathbb{E}_{-X_1}[10\sin(\pi x_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 + 5X_5] \\
+    &= 10 \mathbb{E}_{X_2}[\sin(\pi x_1X_2)] + 20(\mathbb{E}_{X_3}[X_3^2] - \mathbb{E}_{X_3}[X_3] + \frac{1}{4}) + 10 \mathbb{E}_{X_4}[X_4] \\
+    &\quad + 5 \mathbb{E}_{X_5}[X_5]\\
+    &= 10 \cdot \int_{a}^{b} \sin(\pi x_1x_2)dx_2 + 20\cdot(\mu_3^2 + \sigma_3^2 - \mu_3 + \frac{1}{4}) + 10\mu_4 + 5\mu_5 \\
+    &= 10 \cdot \frac{-\cos(\pi bx_1) + \cos(\pi ax_1)}{\pi x_1} + 20(\mu_3^2 + \sigma_3^2 - \mu_3) + 5 + 10\mu_4 + 5\mu_5 \\
+    &= 10 \cdot \frac{-\cos(\pi x_1) + 1}{\pi x_1} + C_1 \\
+\end{align*}
+
+\noindent Analogously, we get for $x_2$:
+
+\begin{align*}
+    PDP_{f,2}(x_2) &= 10 \cdot \frac{-\cos(\pi x_2) + 1}{\pi x_2} + C_2
+\end{align*}
+    
+\begin{align*}
+    PDP_{f,3}(x_3) &= \mathbb{E}_{-X_3}[10\sin(\pi X_1X_2) + 20(x_3-\frac{1}{2})^2 + 10X_4 + 5X_4] \\
+    &= 10\int_{a_1}^{b_1}\int_{a_2}^{b_2}\sin(\pi x_1x_2)dx_2dx_1 + 20(x_3-\frac{1}{2})^2 + 10\mu_4 + 5\mu_5 \\
+    &= \frac{10}{\pi}[Si(\pi b_1a_2) - Si(\pi a_1a_2) - Si(\pi b_1b_2) + Si(\pi a_1b_2)] \\
+    &\quad + 20x_3^2 - 20x_3 + 5 + 10\mu_4 + 5\mu_5 \\
+    &= 20x_3^2 - 20x_3 + C_3 \\
+\end{align*}
+
+\noindent Since Si is not defined at 0, we use a small $\epsilon$ for
+computational stability.\newline
+Analogously, we get for $x_4$, $x_5$:
+
+\begin{align*}
+    PDP_{f,4}(x_4) &= 10x_4 + C_4
+\end{align*}
+
+\begin{align*}
+    PDP_{f,2}(x_2) &= 5x_5 + C_5
+\end{align*}
+
+\begin{align*}
+    ALE_{f,1}(x_1) &= \dots
+\end{align*}
+
+\begin{align*}
+    ALE_{f,2}(x_2) &= \dots
+\end{align*}
+
+\begin{align*}
+    ALE_{f,3}(x_3) &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\Bigg[\frac{\partial}{\partial x_3}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
+    &\qquad\qquad\qquad\qquad\qquad \Bigg. + 5X_5) \big|X_3=z_3\Bigg]dz_3 - C_3 \\
+    &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\left[40z_3-20\right]dz_3 - C_3 \\
+    &= \int_{x_{3,\min}}^{x_3} 40z_3-20dz_3 - C_3 \\
+    &= \left[20z_3^2 - 20z_3\right]_{x_{3,\min}}^{x_3} - C_3 \\
+    &= 20x_3^2 - 20x_3 - 20x_{3,\min}^2 + 20x_{3,\min} - C_3 \\
+    &= 20x_3^2 - 20x_3 - C_3^\prime
+\end{align*}
+    
+\begin{align*}
+    ALE_{f,4}(x_4) &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-X_4|X_4}\Bigg[\frac{\partial}{\partial x_4}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
+    &\qquad\qquad\qquad\qquad\qquad \Bigg. {} + 5X_5) \big|X_4=z_4\Bigg]dz_4 - C_4 \\
+    &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-x_4|x_4}\left[10\right]dz_4 - C_4 \\
+    &= 10x_4 - 10x_{4,\min} - C_4 \\
+    &= 10x_4 - C_4^\prime
+\end{align*}
+
+\noindent Analogously, we get for $x_5$:
+    
+\begin{align*}
+    ALE_{f,5}(x_5) &= 5x_5 - C_5^\prime
+\end{align*}
+
+\begin{figure*}[h!]
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/pdp_groundtruth_comparison.png}
+        \caption{PDP ground truth of Friedman1}
+    \end{subfigure}
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/Friedman1-all/ale_groundtruth_comparison.png}
+        \caption{ALE ground truth of Friedman1}
+    \end{subfigure}
+    \caption{Ground truth feature effects for Friedman1 dataset. The green line
+    represents the analytically derived ground truth, the orange line the estimated feature
+    effect on the ground truth function using 10000 Monte Carlo samples. Note that both
+    are centered that the average effect at the quantile-based grid points is 0.
+    Since $x_6$ and $x_7$, are dummy variables, they have a constant effect of 0 and are
+    thus omitted.}
+    \label{fig:friedman1-groundtruth}  % chktex 24
+\end{figure*}
+
+
+\subsection{FeynmanI.29.16 Dataset}
+
+For the FeynmanI.29.16 dataset, it is not possible to derive the ground truth
+feature effects analytically. Nonetheless, we give a visualization of the
+estimated ground truth feature effects for illustration purposes in
+\textbf{Fig.~\ref{fig:feynman-groundtruth}}.
+
+\begin{figure*}[h!]
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/pdp_groundtruth_comparison.png}
+        \caption{PDP ground truth of FeynmanI.29.16}
+    \end{subfigure}
+    \begin{subfigure}[b]{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/ale_groundtruth_comparison.png}
+        \caption{ALE ground truth of FeynmanI.29.16}
+    \end{subfigure}
+    \caption{Ground truth feature effects for FeynmanI.29.16 dataset. The green line
+    represents the analytically derived ground truth, the orange line the estimated feature
+    effect on the ground truth function using 10000 Monte Carlo samples. Note that both
+    are centered that the average effect at the quantile-based grid points is 0.
+    Since $d_1$ and $d_2$, are dummy variables, they have a constant effect of 0 and are
+    thus omitted.}
+    \label{fig:feynman-groundtruth}  % chktex 24
 \end{figure*}
 
 \clearpage
