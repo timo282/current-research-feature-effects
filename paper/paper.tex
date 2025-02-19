@@ -192,7 +192,7 @@ such as \textit{REPID}~\cite{herbinger_repid_2022}, and local methods like
 curves~\cite{goldstein_peeking_2015} or SHAP dependence
 plots~\cite{lundberg_local_2020}.
 
-In this paper, we focus on PDP and ALE and refer to them when speaking of
+In the following, we focus on PDP and ALE and refer to them when speaking of
 feature effects.
 
 \paragraph{Feature Effect Error and Uncertainty.}
@@ -246,11 +246,9 @@ missing so far.
 Test functions play a crucial role in research, e.g.\ for evaluating different
 methodological approaches, or when conducting simulation studies. In the
 following, we synthesize commonly used test functions across various domains,
-providing structured guidance for researchers --- particularly those in
-Interpretable ML --- in selecting appropriate test functions for their
-simulation studies. By examining test functions from different fields and their
-purposes of application, we aim to facilitate experimental design decisions
-rather than giving an exhaustive overview.
+providing structured guidance for researchers, particularly those in
+Interpretable ML, in selecting appropriate test functions to facilitate
+designing simulation studies.
 
 \paragraph{Test Functions in Optimization.}
 The field of optimization, where test functions are essential to enable the
@@ -264,33 +262,32 @@ scalability~\cite{whitley_building_1998}. A notable framework in this domain is
 the Comparing Continuous Optimizer (COCO) platform with its Black Box
 Optimization Benchmark (BBOB), offering a structured approach to testing
 continuous optimization algorithms through artificial test
-functions~\cite{hansen_coco_2016}. These classical test function suites are
-well-established in optimization and may also serve as a basis for
-Interpretable ML researchers. However, the ability of these artifical test
-functions to represent complex real-world behavior is often
+functions~\cite{hansen_coco_2016}. While being
+well-established in optimization, they may also serve as a basis for
+Interpretable ML researchers. However, the ability of these artificial test
+functions to represent complex real-world behavior is
 limited~\cite{zaefferer_simulation-based_2017}.
 
 \paragraph{Physics-Inspired Test Functions.}
 
 Physics-derived functions offer a compelling source of real-world test cases,
 with the \textit{Feynman Symbolic Regression Database
-    (FSReD)}~\cite{udrescu_ai_2020} being a prominent example. FSReD comprises 100
+    (FSReD)}~\cite{udrescu_ai_2020} as a prominent example. FSReD comprises 100
 physics equations from the seminal \textit{Feynman's Lectures on Physics
     (34--36)}, supplemented by 20 more challenging equations from other seminal
 physics texts. These equations span diverse physics domains and involve a
-varying number of variables and various elementary functions such as arithmetic
-operations, trigonometric functions, and exponentials. Tabular datasets are
+varying number of variables and various elementary functions. Tabular datasets are
 generated through random sampling from defined value ranges.
 
 Matsubara~et~al.~\cite{matsubara_rethinking_2024} addressed several limitations
-of the original FSReD. They introduce a three-tiered categorization of problems
-(easy, medium, hard) based on their complexity, incorporate dummy variables to
-simulate irrelevant features, and implement more realistic sampling ranges and
+of the original FSReD by introducing a three-tiered categorization of problems
+based on their complexity, incorporating dummy variables to
+simulate irrelevant features, and implementing more realistic sampling ranges and
 strategies. Detailed specifications for all formulas, including their sampling
 parameters, are available in their work.
 
-While initially developed for symbolic regression tasks, many Feynman equations
-may serve as suitable test functions for simulation studies in Interpretable
+While originally designed for symbolic regression tasks, many Feynman equations
+serve as suitable test functions for simulation studies in Interpretable
 ML. Their basis in physical principles provides real-world relevance, though  % chktex 13
 researchers should carefully select equations that align with their specific
 analytical objectives and complexity requirements.
@@ -298,28 +295,27 @@ analytical objectives and complexity requirements.
 \paragraph{Test Functions for Interpretable Machine Learning.}
 The Interpretable ML field itself has developed several specialized test
 functions designed to evaluate specific aspects of interpretability methods.
-
 Goldstein et al.~\cite{goldstein_peeking_2015} used several simple test
 functions to demonstrate the behavior of Individual Conditional Expectation
 (ICE) curves. These include a simple additive function to demonstrate the
 absence of interactions, simple interactions to reveal heterogeneity that might
-be obscured by averaging procedures such as PDPs, and a specially designed
+be obscured by PDPs, and a specially designed
 function with an empty quadrant for assessing extrapolation behavior.
 
-Similarly, Liu et al.~\cite{liu_model_2018} focus on simple functions before
-progressing to more complex ones. They begin with basic two-variable scenarios
---- using additive functions, interaction functions, and combinations thereof
---- and examine these under both independent and correlated feature conditions
-to compare various feature effect methods. The advantage of these simple test
-functions is that solutions (e.g., feature effects) can also be computed
-analytically, and that they allow for deeper and more fine-grained analysis of
+Similarly, Liu et al.~\cite{liu_model_2018} focused on simple functions before
+increasing complexity. They started with basic two-variable scenarios
+--- additive functions, interaction functions, and combinations thereof
+--- and examined these under both independent and correlated features,
+comparing various feature effect methods. Advantages of these simple test
+functions are that solutions (e.g., feature effects) can be computed
+analytically, and that they allow for more fine-grained analyses of
 individual aspects.
 
 A more complex test function suite was proposed by
 Tsang~et~al.~\cite{tsang_detecting_2017}, specifically designed to evaluate the
 detection of variable interactions. Their functions incorporate various types
 of interactions with different orders, strengths, non-linearities, and
-overlaps. While this makes them particularly valuable for interaction
+overlaps. While being particularly valuable for interaction 
 detection, they are also useful for evaluating other interpretability methods
 in scenarios with complex interactions.
 
@@ -334,20 +330,19 @@ researchers should consider several criteria, including the specific aspects of
 interpretability being evaluated, the desired complexity level and number of
 variables, the presence of specific challenges such as correlation between
 features or interactions, the need for analytical solutions for validation, as
-well as the relevance to real-world applications in the domain of interest.
+well as the relevance to real-world applications.
 
-\section{Background}\label{sec:background}
+\section{Theoretical Framework: Feature Effects and Error Decomposition}\label{sec:background}
 
 \subsection{Feature Effects}
 
-The \textit{Partial Dependence Plot (PDP)} by
-Friedman~\cite{friedman_greedy_2001} describes the marginal effect of one or
+The \textit{Partial Dependence Plot (PDP)}~\cite{friedman_greedy_2001} describes the marginal effect of one or
 two features on the prediction of a model $\hat f$. For a feature set $X_S$
 (with $S \subseteq \{1,\ldots,p\}$, $|S| = 1$ or $|S| = 2$), the PDP is defined
 as
 
 \begin{equation}
-    PDP_{\hat f, S} = \mathbb{E}_{X_C}[\hat{f}(x_S, X_C)] = \int f(x_S, x_C)d\mathbb{P}(x_C),
+    PDP_{\hat f, S} = \mathbb{E}_{X_C}[\hat{f}(x_S, X_C)] = \int \hat f(x_S, x_C)d\mathbb{P}(x_C),
 \end{equation}
 
 \noindent where $X_C$ is the complement feature subset. $PDP_{\hat f, S}$ is a
@@ -358,13 +353,13 @@ function of $x_S$ and can be estimated by Monte Carlo integration:
 \end{equation}
 
 \noindent Here, $x_C^{(i)}$ are the actual complement feature values from the dataset of $n$ instances.
-To plot this function, a grid of $G$ grid points
-$\{(x_S^{(g)}, \widehat{PD}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.  % chktex 3
+To plot the function, a grid of $G$ grid points
+$\{(x_S^{(g)}, \widehat{PDP}_{\hat f, S}(x_S^{(g)}))\}_{g=1}^G$ can be used~\cite{molnar_relating_2023}.  % chktex 3
 Molnar et al.~\cite{molnar_general_2022} recommend using quantile-based over equidistant grids.\\
 
-\noindent The \textit{Accumulated Local Effects (ALE)} plot is an alternative to the PDP that
-solves the extrapolation issue~\cite{apley_visualizing_2020}. Using the notation above,
-for $|S|=1$, the ALE plot is defined as
+\newpage
+\noindent The \textit{Accumulated Local Effects (ALE)} plot~\cite{apley_visualizing_2020}
+for $|S|=1$ is defined as
 
 \begin{eqnarray}
     ALE_{\hat f,S}(x_S) &=& \int_{x_{\text{min},s}}^{x_S} \mathbb{E}_{X_C|X_S}
@@ -374,7 +369,7 @@ for $|S|=1$, the ALE plot is defined as
 \end{eqnarray}
 
 \noindent where $\hat{f}^S(x_S, x_C) = \frac{\partial \hat{f}(x_S, x_C)}{\partial x_S}$.
-The constant is chosen so that $\widehat{ALE}_{\hat f,S}(X_S)$ is centered with a mean of $0$
+The constant is chosen so that $ALE_{\hat f,S}(X_S)$ is centered with a mean of $0$
 w.r.t.\ the marginal distribution of $X_S$. The uncentered ALE can be estimated by
 
 \begin{equation}\label{eq:ale-estimate-uncentered}
@@ -385,8 +380,8 @@ w.r.t.\ the marginal distribution of $X_S$. The uncentered ALE can be estimated 
 
 \noindent Here, $\{N_S(k) = (z_{k-1,S}, z_{k,S}]\}_{k=1}^{K}$ partitions the samples  % chktex 3 chktex 9
 $\{x^{(i)}_S\}_{i=1}^n$ into $K$ intervals or neighborhoods $N_S(k)$. $n_S(k)$ denotes  % chktex 3
-the number of observations in the $k$th interval $N_S(k)$, $k_S(x)$ represents the index
-of the interval to which a particular value $x$ of feature $x_S$ belongs.
+the number of observations in the $k$th interval, $k_S(x)$ the index
+of the interval to which a particular value $x$ of feature $S$ belongs.
 The uncentered ALE is centered by
 
 \begin{equation}\label{eq:ale-estimate-centered}
@@ -397,16 +392,16 @@ The uncentered ALE is centered by
 
 \noindent to have a mean effect of $0$. For the grid that defines the intervals,
 the quantiles of the empirical distribution of $\{x^{(i)}_S\}_{i=1}^n$ can be  % chktex 3
-used~\cite{apley_visualizing_2020}.\\
+used~\cite{apley_visualizing_2020}.
 
 \subsection{Feature Effect Error Decomposition}
 
-To quantify the error of a computed feature effect, a ``ground truth'' needs to
+\paragraph{Feature effect ground truth.} To quantify the error of a computed
+feature effect, a ``ground truth'' needs to
 be defined first. We follow the approach of Molnar et
 al.~\cite{molnar_relating_2023} and define ground truth versions of PDP and ALE
 directly on the data generating process (DGP) by applying PDP and ALE to the
 underlying ground truth function $f$ (instead of model $\hat f$).
-
 For PDP, we can directly use the definition of Molnar et
 al.~\cite{molnar_relating_2023}:
 
@@ -420,9 +415,11 @@ al.~\cite{molnar_relating_2023}:
     \end{equation}
 \end{definition}
 
-As stated by Molnar et al.~\cite{molnar_relating_2023}, their results also
+\noindent As stated by Molnar et al.~\cite{molnar_relating_2023}, their results also
 apply to conditional variants of the PDP such as ALE. We now make this  % chktex 13
-definition explicit:
+definition explicit.
+
+\newpage
 
 \begin{definition}
     The ALE ground truth is the ALE applied to function $f : \mathcal{X} \xrightarrow{} \mathcal{Y}$ of the data generating process.
@@ -437,26 +434,25 @@ definition explicit:
 %With these definitions, $\widehat{PDP}_{\hat f,S}$ and $\widehat{ALE}_{\hat f,S}$
 %can now be treated as statistical estimators of the ground truth feature effects
 %(cf.~\cite{molnar_relating_2023}). 
-Note that different ground truth effects may also be defined, and our choices
+\noindent Note that different ground truth feature effects can also be defined, and our choices
 come with certain implications and limitations, such as omitting the
-\textit{aggregation bias}\footnote{for details,
-    see~\cite{herbinger_repid_2022}}~\cite{mehrabi_survey_2021}.
+\textit{aggregation bias}~\cite{herbinger_repid_2022,mehrabi_survey_2021}.
 
-With more complex ground truth functions $f$, it may become increasingly
-difficult to derive the ground truth feature effects analytically, especially
-for ALE. In these cases, we therefore propose to also estimate those effects by  % chktex 13
+With more complex ground truth functions $f$, it becomes often infeasible to
+derive the ground truth feature effects analytically. For these cases, we
+therefore propose to also estimate those effects by  % chktex 13
 Monte Carlo integration, yielding $\widehat{PDP}_{f,S}(x_S)$ and
-$\widehat{ALE}_{f,S}(x_S)$ (obtained by plugging in $f$ instead of $\hat f$
+$\widehat{ALE}_{f,S}(x_S)$ (obtained by plugging $f$ instead of $\hat f$
 into the estimators in equations (\ref{eq:pdp-estimate}) and
-(\ref{eq:ale-estimate-uncentered}) / (\ref{eq:ale-estimate-centered})).\\
+(\ref{eq:ale-estimate-uncentered}) / (\ref{eq:ale-estimate-centered})).
 
-\noindent Summarizing, we have now defined four quantities per feature effect:
+\paragraph{Feature effect error decomposition.} Summarizing, we have now defined four quantities per feature effect:
 $PDP_{f,S}$ $\widehat{PDP}_{f,S}$, $PDP_{\hat f,S}$, and $\widehat{PDP}_{\hat f,S}$
-(analogue for ALE). We can now define different errors between each of these
-quantities. In this paper, we focus on the MSE, as it can be decomposed into
-bias and variance (see e.g.~\cite{geman_neural_1992}).
-Taking, for example, $PDP_{f,S}$ as ground truth, we can define the MSE of
-$PDP_{\hat f,S}$ at a point $x_S$ as follows~\cite{molnar_relating_2023}:
+(analogously for ALE). Between these quantities, different error metrics can because
+defined. In this paper, we focus on MSE as it can be decomposed into
+bias and variance~\cite{geman_neural_1992}.
+When taking $PDP_{f,S}$ as ground truth, the MSE of $PDP_{\hat f,S}$ at
+point $x_S$ can be formulated as follows~\cite{molnar_relating_2023}:
 
 \begin{equation}
     \text{MSE}(x_S; PDP_{f,S}, PDP_{\hat f,S})
@@ -471,16 +467,16 @@ is linked to the bias of the model, the variance comes from the variance
 in the model fits (randomness in training data, randomness in model training procedure).
 
 Since we usually cannot determine $PDP_{\hat f,S}$, we need to estimate it by
-Monte Carlo integration, yielding $\widehat{PDP}_{\hat f,S}(x_S)$. This,
-however, introduces an additional variance term (we use the random variable
-$X_{mc}$ for the Monte Carlo samples (e.g., training or validation data)):
+Monte Carlo integration, which introduces an additional variance term (we use the random variable
+$X$ for the Monte Carlo samples):
 
 \begin{equation}
     \begin{split}
         \text{MSE}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S})
         = \underbrace{{(PDP_{f,S}(x_S) - \mathbb{E}_F[PDP_{\hat{f}, S}(x_S)])}^2}_{Bias^2} \\
-        + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance} + \underbrace{\mathbb{E}_F\text{Var}_{X_{mc}}[\widehat{PDP}_{\hat{f},S}(x_S)]}_{MC-Variance}
+        + \underbrace{\text{Var}_F[PDP_{\hat{f},S}(x_S)]}_{Variance} + \underbrace{\mathbb{E}_F\text{Var}_{X}[\widehat{PDP}_{\hat{f},S}(x_S)]}_{MC-Variance}
     \end{split}
+    \label{eq:mse-decomposition}
 \end{equation}
 
 \begin{proof}
@@ -492,21 +488,26 @@ $X_{mc}$ for the Monte Carlo samples (e.g., training or validation data)):
 
 \noindent We see that the variance due to MC integration also depends on the model
 distribution $F$. Similarly, one could use the estimate $\widehat{PDP}_{f,S}$
-as groundtruth, introducing an additional variance term $Var_{X_{mc2}}$when
-estimated on different MC sample (proof in
+as ground truth, introducing an additional variance term when
+estimated with Monte Carlo samples (proof in
 \textsc{Appendix~\ref{app:proof-mc-variance}}).
-An overview of all error terms in this chain can be found in
-\textbf{Fig.\@~\ref{fig:error-graph}}.\\
+An overview of all error terms is given in
+\textbf{Fig.\@~\ref{fig:error-graph}}.
 
 \begin{figure}[t]
     \includegraphics[width=\textwidth]{img/error_graph.pdf}
-    \caption{Error chain in feature effect estimation
-        (modified, original version can be found in~\cite{molnar_relating_2023})}\label{fig:error-graph}
+    \caption{Error chain in feature effect estimation. The deviation of the estimated
+        feature effect from the ground truth can be decomposed into bias, model variance,
+        and Monte Carlo variance. If the ground truth is estimated by Monte Carlo
+        integration, an additional Monte Carlo variance term arises. This graphic
+        builds on~\cite{molnar_relating_2023}.}\label{fig:error-graph}
 \end{figure}
 
-\noindent $\mathbb{E}_F$ and $\text{Var}_F$ could be estimated by averaging over
+\paragraph{Feature effect error estimation.} Next, we aim to estimate these error terms.
+$\mathbb{E}_F$ and $\text{Var}_F$ can be estimated by averaging over
 multiple models of the same inducer fitted to $M$ different training data
-sets sampled independently from the DGP. We propose the following estimators:  % chktex 13
+sets, each independently sampled from the DGP. We propose the following estimators:  % chktex 13
+
 \begin{equation}
     \widehat{\text{MSE}}(x_S; PDP_{f,S}, \widehat{PDP}_{\hat f,S}) = \frac{1}{M} \sum_{m=1}^{M} {(PDP_{f,S}(x_S) - \widehat{PDP}_{\hat f^{(m)},S}(x_S))}^2
     \label{eq:mse-estimator}
@@ -516,21 +517,26 @@ sets sampled independently from the DGP. We propose the following estimators:  %
     \label{eq:bias-estimator}
 \end{equation}
 \begin{equation}
-    \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) =
+    \begin{split}
+    \widehat{\text{Variance}}(x_S; \widehat{PDP}_{\hat f,S}) = \\
     \frac{1}{M-1}\sum_{m=1}^M{\left(\widehat{PDP}_{\hat f^{(m)},S}(x_S) - \frac{1}{M}\sum_{m=1}^M \widehat{PDP}_{\hat f^{(m)},S}(x_S)\right)}^2
+    \end{split}
     \label{eq:variance-estimator}
 \end{equation}
 
-\noindent Note that these are similar to the approach in~\cite{molnar_relating_2023},
-but we do not specify which data points to use for MC integration. The
-variance captures both the variance in the model fits and the variance due to
-MC integration. To estimate the MC variance, we propose the following estimators:
+\noindent The variance estimator is the same as in~\cite{molnar_relating_2023},
+capturing both the variance in the model fits and the variance due to
+MC integration. For the Monte Carlo variance of estimating the ground truth by
+Monte Carlo integration, i.e.\ omitting the model, we propose the following estimator:
 \begin{equation}
     \widehat{\text{Variance}}_{MC}(x_S; PDP_f, \widehat{PDP}_f) = \frac{1}{K}\sum_{k=1}^K{(PDP_f(x_S) - \widehat{PDP}_f^{(k)}(x_S))}^2
     \label{eq:mc-variance-estimator-groundtruth}
 \end{equation}
 
-\noindent and
+\noindent To estimate the Monte Carlo variance for feature effects of models
+given in equation~\ref{eq:mse-decomposition}, we have to consider multiple
+Monte Carlo iterations for multiple model refits, yielding the following estimator:
+
 \begin{equation}
     \begin{split}
         \widehat{\text{Variance}}_{MC}(x_S; \widehat{PDP}_{\hat{f}}) = \\ \frac{1}{M(K-1)}\sum_{m=1}^M \sum_{k=1}^K
@@ -539,28 +545,36 @@ MC integration. To estimate the MC variance, we propose the following estimators
     \label{eq:mc-variance-estimator-model}
 \end{equation}
 
-\noindent For more convenient analysis of the errors, one could also
-aggregate them over the marginal distribution of $X_S$ (e.g.,
-estimated by averaging over the grid points if chosen appropriately)
-to obtain a single error measure per feature effect.
+\noindent While these estimators are based on the PDP, they
+can be defined analogously for ALE.  % chktex 13
+% For a more convenient analysis of the errors, we suggest
+% an aggregation of the error terms over the marginal distribution of $X_S$
+% (e.g., by averaging over the grid points if chosen appropriately)
+% to obtain a single error measure per feature effect.
+It is important to note that most of these estimators are rather
+impractical as they require knowledge of the ground truth. Nonetheless,
+we rather use them to understand the behavior of the feature
+effect error components under different dataset choices. This
+distinguishes our approach from previous works such as~\cite{molnar_relating_2023},
+which mostly focus on providing practical variance estimates to provide
+confidence intervals for uncertainty quantification in feature effects. 
 
-While our definitions are based on the PDP, they can be directly applied to the
-ALE as well.
 
 \section{Methodology \& Experimental Set-Up}\label{sec:methodology-set-up}
 
-To address the research question of which data to choose to estimate feature
-effects, we conduct a comprehensive simulation study. For different models,
+To address the central research question of this paper, which data to
+choose for feature effect estimation, we conduct a comprehensive simulation
+study. For different models,
 datasets, and dataset sizes, we estimate the feature effects PDP and ALE on
 training data, validation data, and in a cross-validated manner. We then
-compute the feature effect error as MSE with respect to the ground truth
-feature effects and decompose it into bias and variance components. By
+compute the feature effect error as MSE against the ground truth
+feature effects, and decompose it into bias and variance components. By
 comparing these error terms across the different estimation strategies
 (training, validation, cross-validation), we aim to provide nuanced empirical
 insights into the implications of the data choice on feature effect estimation.
-For deeper analysis, we conduct two ablation studies: one decomposing the
-feature effect variance into model variance and Monte Carlo variance, and
-another examining the impact of the dataset size on the Monte Carlo variance.
+To deepen our analysis, we conduct two ablation studies: (1)~decomposing feature
+effect variance into model variance and Monte Carlo variance, and (2)~examining
+the influence of dataset size on Monte Carlo variance.
 In the following, we describe our experimental set-up for the main simulation
 study (\textsc{Section~\ref{sec:experiment-main}}) and the ablation studies
 (\textsc{Section~\ref{sec:experiment-ablation}}).
@@ -574,39 +588,38 @@ distinct datasets of varying complexity for our simulation study:
 \begin{itemize}[label=--]
     \item \textbf{SimpleNormalCorrelated} consists of four
           standard-normally distributed features, where the first two
-          features exhibit strong correlation ($\rho = 0.9$) while the others are
-          independent dummy variables. The target variable is given by this simple
-          formula:
+          are strongly correlated ($\rho = 0.9$) while the others are
+          independent dummy variables. The target variable is given by:
           \begin{equation}
               f_1(\boldsymbol{x}) = x_1 + \frac{x_2^2}{2} + x_1 x_2
           \end{equation}
-          This test function is inspired by~\cite{liu_model_2018} and aims
-          to focus on the impact of correlation and interactions.
+          This test function, inspired by~\cite{liu_model_2018}, focuses
+          on investigating the impact of correlation and interactions.
     \item \textbf{Friedman1} implements the classical Friedman1 benchmark
           function~\cite{breiman_bagging_1996,friedman_multivariate_1991}
-          with seven uniformly distributed features between 0 and 1, all mutually
-          independent:
+          with seven mutually independent, uniformly distributed features
+          between 0 and 1:
           \begin{equation}
               f_2(\boldsymbol{x}) = 10 \sin(\pi x_1 x_2) + 20{(x_3 - \frac{1}{2})}^2 + 10 x_4 + 5 x_5
           \end{equation}
-          This dataset includes a mix of linear and different non-linear effects with
+          This dataset includes a mix of linear and non-linear effects with
           interactions.
     \item \textbf{Feynman I.29.16} is based on the Feynman equation I.29.16
-          describing wave interference, comprising six independent features. Using
+          describing wave interference, comprising six independent features. Following
           the refined sampling strategies from Matsubara et al.~\cite{matsubara_rethinking_2024},
-          two log-uniformly distributed variables on $[0.1, 10]$, two angles uniformly
+          we use two log-uniformly distributed variables on $[0.1, 10]$, two angles uniformly
           distributed over $[0, 2\pi]$, and two uniformly distributed dummy variables on [0,1]:
           \begin{equation}
               f_3(\boldsymbol{x}) = \sqrt{x_1^2 + x_2^2 + 2 x_1 x_2 \cos(\theta_1 - \theta_2)}
           \end{equation}
-          This dataset is designed to reflect a physics-based relationship for more real-world relevance.
+          This dataset is designed to reflect a physics-based relationship for enhanced real-world relevance.
 
 \end{itemize}
 
-\noindent To generate the datasets, a standard normally distributed noise term $\epsilon$ is added to each function,
-scaled by a signal-to-noise ratio of five\footnote{To determine the factor by which the noise is multiplied,
-    the standard deviation of the signal is computed over 100'000 randomly drawn samples of $y$ and divided by
-    the signal-to-noise ratio of five.}. For each test function, we consider two dataset sizes:
+\noindent To generate the datasets, we add a standard-normally distributed noise term $\epsilon$ to each function,
+scaled by a signal-to-noise ratio of five\footnote{To determine the noise scaling factor,
+    we compute the standard deviation of the signal over 100,000 randomly drawn samples of $y$ and
+    divide by the signal-to-noise ratio of five.}. For each test function, we consider two dataset sizes:
 $(n_{train}=1000, n_{val}=250)$ and $(n_{train}=8000, n_{val}=2000)$.
 
 \paragraph{Models.}
@@ -637,28 +650,29 @@ Monte Carlo integration, we use for each the full training and validation set
 as well as a cross-validation strategy. In the latter case, we use a 5-fold
 cross-validation on the combined samples of training and validation set, in
 each fold fit the model on four folds, and estimate the feature effects on the
-remaining fold. We then average the feature effects over all folds. We also
-estimate the ground truth feature effects $\widehat{PDP}_{f,S}$ and
-$\widehat{ALE}_{f,S}$ since the complexity of the Feynman equation makes
-analytical computation infeasible. For the Monte Carlo integration, we use
-10000 samples additionally sampled from the DGP, which introduces only a
-negligible additional variance term as we show in (\dots) We use 100 grid
+remaining fold. We then average the feature effects point-wise over all folds.
+
+We also estimate the ground truth feature effects $\widehat{PDP}_{f,S}$ and
+$\widehat{ALE}_{f,S}$ as the complexity of the Feynman equation makes
+an analytical computation infeasible. For their Monte Carlo integration, we use
+10,000 samples additionally drawn from the DGP, which introduces only a
+negligible additional variance as we show in (Section~\ref{sec:results-dataset-size}). We use 100 grid
 points, defined by the quantiles of the theoretical distribution of $X_S$ to
 enable a comparison across feature effects. Additionally, we center the curves
 after estimation to have a mean effect of $0$ w.r.t.\ the grid points, and we
 omit the first and the last grid point after estimation to avoid boundary
-effects especially occuring in ALE plots.
+effects particularly occuring in ALE plots.
 
 \paragraph{Feature effect errors.} To quantify the error of the estimated feature effects, we compute the MSE of
-the estimated model feature effects with respect to the estimated ground truth
-features effects, as well as their bias and variance. For that, we use the
+the estimated model feature effects against the estimated ground truth effects,
+as well as their bias and variance. We use the
 estimators defined in equations~(\ref{eq:mse-estimator}) to
 (\ref{eq:variance-estimator}), using $\widehat{PDP}_{f,S}$ instead of
 $PDP_{f,S}$ as ground truth (analogously for ALE). We repeat each
 dataset-size-model combination $M=30$ times to estimate the error terms, where
 each repetition involves drawing a new training and validation set from the
 DGP, refitting the models, and estimating the feature effects. To aggregate the
-errors into a single measure per feature effect, we average the errors over the
+errors into a single number per feature effect, we average them over the
 marginal distribution of $X_S$ by averaging over the grid points.
 
 \subsection{Ablation Experiments}\label{sec:experiment-ablation}
@@ -666,37 +680,39 @@ marginal distribution of $X_S$ by averaging over the grid points.
 As described earlier, we conduct two ablation studies for more detailed
 insights into the Monte Carlo variance.
 
-\paragraph{Variance decomposition study.} The variance of the feature effects estimated with the procedure described in
-the main experiment \textsc{Section~\ref{sec:experiment-main}} consists of two
-components: the model variance and the variance due to the Monte Carlo
-integration. To disentangle these two sources of variance, we aim to
-additionally estimate the Monte Carlo variance using the estimator in
-equation~(\ref{eq:mc-variance-estimator-model}). This allows us to substract it
-from the total variance estimated in the main experiment and obtain the model
-variance, giving more nuanced insights into the implications of the data choice
-on feature effect estimation. To obtain this estimate, we maintain the set-up
-of the main experiment but for each trained model $\hat f^{(m)}$ (plus five
-models from CV $\hat f^{(m,1)} - \hat f^{(m,5)}$), we draw $K=30$ new training
-and validation sets from the DGP and estimate the feature effects on these sets
-plus in a cross-validated manner with the already fitted models. This allows us
-to estimate the Monte Carlo variance as in
-equation~(\ref{eq:mc-variance-estimator-model}). Since this study is
-computationally more expensive, we do this only for XGBoost (OT and OF), which
-is arguably the most practically relevant model in our set-up. We use the same
-datasets and sizes as in the main experiment.
+\paragraph{Variance decomposition study.} The variance of the feature effects
+estimated in the main experiment \textsc{Section~\ref{sec:experiment-main}} consists of two
+components: model variance and variance due to the Monte Carlo
+integration. To disentangle these two sources of variance, we estimate the
+Monte Carlo variance using the estimator in
+equation~(\ref{eq:mc-variance-estimator-model}). By subtracting this from the
+total variance obtained in the main experiment, we derive the model variance,
+providing more nuanced insights into the implications of data choice in feature
+effect estimation. 
 
-\paragraph{Impact of dataset size on Monte Carlo variance.} To investigate the impact of the dataset size on the Monte Carlo variance, we
-estimate the Monte Carlo variance between the analytical ground truth feature
-effects and the estimated ground truth feature effects on different dataset
-sizes. As estimator for the Monte Carlo variance, we use
-equation~(\ref{eq:mc-variance-estimator-groundtruth}). With this approach, we
-entirely omit the model and thus eliminate other error sources such as model
-bias and variance (as with a perfect model fit). To estimate the ground truth
-feature effects, we use 50 different dataset sizes ranging from $10^1$ to
-$10^6$ on a logarithmic scale. Note that we only consider the
-SimpleNormalCorrelated and Friedman1 datasets for this study as an analytical
-computation of the FeynmanI.29.16 feature effects is infeasible. For other
-details, we maintain the set-up of the main experiment.
+For this analysis, we maintain the set-up of the main experiment with one key
+modification: for each trained model $\hat f^{(m)}$ (plus the five
+models $\hat f^{(m,1)} - \hat f^{(m,5)}$ trained in cross-validation), we draw $K=30$ new training
+and validation sets from the DGP. We then estimate feature effects on these  % chktex 13
+sets and in a cross-validated manner using the already fitted models. This approach
+allows us to estimate the Monte Carlo variance.
+
+Due to the computational intensity of this analysis, we focus only on XGBoost models
+(both OT and OF variants), which represent the arguably most practically relevant models
+in our setup.
+
+\paragraph{Impact of dataset size on Monte Carlo variance.}
+To investigate how dataset size influences Monte Carlo variance,
+we estimate the variance between analytical ground truth feature effects
+and estimated ground truth feature effects across different dataset sizes.
+We use equation~(\ref{eq:mc-variance-estimator-groundtruth}) as estimator
+for the Monte Carlo variance. This approach entirely omits the model, thereby
+eliminating other error sources such as model bias and variance (simulating a perfect model fit)
+
+We analyze 50 different dataset sizes ranging from $10^1$ to $10^6$ on a logarithmic
+scale. We restrict this analysis to the SimpleNormalCorrelated and Friedman1 datasets,
+as analytical computation of FeynmanI.29.16 ground truth feature effects is infeasible.
+All other experimental details follow the setup of the main experiment.
 
 \section{Results}\label{sec:results}
 
@@ -1115,7 +1131,7 @@ in this area to obtain practically relevant insights.
     \qed\
 \end{proof}
 
-\section{Proof: Monte Carlo Variance for Groundtruth}\label{app:proof-mc-variance}
+\section{Proof: Monte Carlo Variance for Ground truth}\label{app:proof-mc-variance}
 \begin{proof}
     Let $X$ denote a random variable for the Monte Carlo samples used to estimate the feature effect.
     For better readability, we will omit the subscript $S$ as well as the point $x_S$ in this proof:
