@@ -1,3 +1,7 @@
+"""
+Script to run the main simulation study on feature effect error decomposition.
+"""
+
 import argparse
 from configparser import ConfigParser
 from pathlib import Path
@@ -187,21 +191,25 @@ def simulate(
 
 
 if __name__ == "__main__":
+    # parse arguments and read config
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", type=str, required=True, help="Path to config.ini file")
     args = parser.parse_args()
     sim_config = ConfigParser()
     sim_config.read(Path(args.config))
 
+    # setup logging
     log_queue, log_listener = setup_logger(Path(sim_config.get("storage", "log_dir")))
 
+    # create parameter space
     param_space = create_parameter_space(sim_config)
     logging.info(f"Created parameter space with {len(param_space)} simulation parameters.")
 
+    # create directories and processes
     create_and_set_sim_dir(sim_config, config_path=Path(args.config))
-
     num_processes = min(len(param_space), cpu_count())
 
+    # run simulations
     with Pool(processes=num_processes, initializer=configure_worker_logger, initargs=(log_queue,)) as pool:
         pool.map(
             simulate,

@@ -1,3 +1,7 @@
+"""
+Script to perform the ablation study on estimating Monte Carlo variances to enable variance decomposition.
+"""
+
 import argparse
 from configparser import ConfigParser
 from pathlib import Path

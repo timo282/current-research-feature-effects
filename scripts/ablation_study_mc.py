@@ -1,3 +1,7 @@
+"""
+Script to perform the ablation study on dataset size impact on Monte Carlo variance.
+"""
+
 import argparse
 import configparser
 from typing import Dict
