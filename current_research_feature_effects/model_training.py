@@ -1,3 +1,7 @@
+"""
+This module contains functions for hyperparameter optimization and model training.
+"""
+
 from typing_extensions import Literal, Dict
 from pathlib import Path
 from configparser import ConfigParser
@@ -20,6 +24,9 @@ def _objective(
     trial: optuna.trial.Trial,
     metric: str,
 ) -> float:
+    """
+    Objective function for hyperparameter optimization.
+    """
     hyperparams = suggested_hps_for_model(model, trial)
     model.set_params(**hyperparams)
 
@@ -48,6 +55,37 @@ def optimize(
     study_name: str,
     storage_name: Path,
 ) -> optuna.study.Study:
+    """
+    Optimize hyperparameters of a model using Optuna.
+
+    Parameters
+    ----------
+    model : BaseEstimator
+        Model to optimize.
+    X_train : np.ndarray
+        Training features.
+    y_train : np.ndarray
+        Training labels.
+    X_val : np.ndarray
+        Validation features.
+    y_val : np.ndarray
+        Validation labels.
+    n_trials : int
+        Number of trials.
+    metric : str
+        Metric to optimize.
+    direction : Literal[&quot;maximize&quot;, &quot;minimize&quot;]
+        Direction of optimization.
+    study_name : str
+        Name of the optuna study.
+    storage_name : Path
+        Optuna storage name.
+
+    Returns
+    -------
+    optuna.study.Study
+        Optuna optimization study.
+    """
     optuna.logging.set_verbosity(optuna.logging.ERROR)
 
     sampler = optuna.samplers.TPESampler(seed=42)

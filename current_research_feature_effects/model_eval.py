@@ -1,3 +1,7 @@
+"""
+This module contains functions for evaluating model performance.
+"""
+
 from typing_extensions import Dict, List
 import numpy as np
 from sklearn.base import BaseEstimator

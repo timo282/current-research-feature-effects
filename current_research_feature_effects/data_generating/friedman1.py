@@ -1,3 +1,7 @@
+"""
+This module contains the groundtruth class for the Friedman1 function.
+"""
+
 from typing import Callable
 import pandas as pd
 import numpy as np
@@ -16,7 +20,7 @@ class Friedman1Groundtruth(Groundtruth):
     def predict(self, X) -> np.ndarray:
         """
         Returns target value (y) of the groundtruth (Friedman1) for each
-        sample in X. The output `y` is created according to the formula::
+        sample in X. The output `y` is created according to the formula:
 
         y(X) = 10 * sin(pi * X[:, 0] * X[:, 1]) + 20 * (X[:, 2] - 0.5) ** 2 \
         + 10 * X[:, 3] + 5 * X[:, 4].

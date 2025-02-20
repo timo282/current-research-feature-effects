@@ -1,5 +1,7 @@
-# from configparser import ConfigParser
-# import math
+"""
+This module contains functions to plot feature effects, model evaluation results, and feature effect errors.
+"""
+
 from typing_extensions import Dict, Literal, List, Tuple, Optional
 from pathlib import Path
 import pandas as pd
@@ -15,6 +17,7 @@ from current_research_feature_effects.plotting.utils import (
     set_style,
     get_boxplot_style,
     get_feature_effect_plot_style,
+    set_fontsize,
 )
 
 
@@ -92,9 +95,9 @@ def plot_feature_effect_vs_groundtruth(
     palette = sns.color_palette("Set2")
 
     if large_font:
-        _set_fontsize("xlarge")
+        set_fontsize("xlarge")
     else:
-        _set_fontsize("standard")
+        set_fontsize("standard")
 
     fig, axes = plt.subplots(1, len(feature_names), figsize=(5 * len(feature_names), 5), dpi=300, sharey=True)
     for i, f in enumerate(feature_names):
@@ -135,11 +138,30 @@ def boxplot_model_results(
     ylim: Optional[Tuple[float, float]] = None,
     large_font: bool = False,
 ) -> plt.Figure:
+    """
+    Create a boxplot of the model evaluation results.
+
+    Parameters
+    ----------
+    metric : Literal[&quot;mse&quot;, &quot;mae&quot;, &quot;r2&quot;]
+        The metric to plot.
+    df : pd.DataFrame
+        The dataframe containing the model evaluation results.
+    ylim : Optional[Tuple[float, float]], optional
+        The y-axis limits, by default None.
+    large_font : bool, optional
+        If True, use larger font sizes, by default False.
+
+    Returns
+    -------
+    plt.Figure
+        The figure object containing the generated plot.
+    """
     set_style()
     if large_font:
-        _set_fontsize("large")
+        set_fontsize("large")
     else:
-        _set_fontsize("standard")
+        set_fontsize("standard")
     fig, ax = plt.subplots(1, 2, figsize=(12, 6), dpi=300, sharey=True)
     fig.suptitle("Model evaluation", fontsize=16, fontweight="bold")
     ax[0].set_title(f"{metric} on train set")
@@ -170,53 +192,6 @@ def boxplot_model_results(
     return fig
 
 
-def _set_fontsize(size: Literal["standard", "large", "xlarge"]) -> None:
-    """
-    Set the font size of the plots.
-
-    Parameters
-    ----------
-    size : {'standard', 'large', 'xlarge'}
-        The font size to set.
-    """
-    if size == "xlarge":
-        plt.rcParams.update(
-            {
-                "font.size": 16,
-                "axes.labelsize": 18,
-                "axes.titlesize": 20,
-                "figure.titlesize": 22,
-                "xtick.labelsize": 16,
-                "ytick.labelsize": 16,
-                "legend.fontsize": 16,
-            }
-        )
-    elif size == "large":
-        plt.rcParams.update(
-            {
-                "font.size": 14,
-                "axes.labelsize": 16,
-                "axes.titlesize": 18,
-                "figure.titlesize": 20,
-                "xtick.labelsize": 14,
-                "ytick.labelsize": 14,
-                "legend.fontsize": 14,
-            }
-        )
-    else:
-        plt.rcParams.update(
-            {
-                "font.size": 11,
-                "axes.labelsize": 12,
-                "axes.titlesize": 12,
-                "figure.titlesize": 16,
-                "xtick.labelsize": 10,
-                "ytick.labelsize": 10,
-                "legend.fontsize": 12,
-            }
-        )
-
-
 def plot_feature_effect_error_table(
     df: pd.DataFrame,
     models: List[str],
@@ -245,9 +220,9 @@ def plot_feature_effect_error_table(
     """
     for model in models:
         if large_font:
-            _set_fontsize("xlarge")
+            set_fontsize("xlarge")
         else:
-            _set_fontsize("standard")
+            set_fontsize("standard")
 
         g = sns.FacetGrid(
             df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=0.67
@@ -299,9 +274,9 @@ def plot_variance_table(
     """
     for model in models:
         if large_font:
-            _set_fontsize("xlarge")
+            set_fontsize("xlarge")
         else:
-            _set_fontsize("standard")
+            set_fontsize("standard")
 
         g = sns.FacetGrid(
             df.loc[df["model"] == model], row="n_train", col="feature", height=3, sharey="row", aspect=0.67
@@ -357,9 +332,9 @@ def plot_fe_bias_variance(error_dict, sharey=True, large_font=False) -> plt.Figu
     palette = sns.color_palette("Set2")
 
     if large_font:
-        _set_fontsize("xlarge")
+        set_fontsize("xlarge")
     else:
-        _set_fontsize("standard")
+        set_fontsize("standard")
 
     n_features = len(list(list(error_dict.values())[0].values())[0].features)
     fig, axes = plt.subplots(len(error_dict), n_features, figsize=(5 * n_features, 5 * len(error_dict)), sharey=sharey)
@@ -452,9 +427,9 @@ def plot_mcvariance_over_features(
     n_feat = len(feature_names)
 
     if large_font:
-        _set_fontsize("large")
+        set_fontsize("large")
     else:
-        _set_fontsize("standard")
+        set_fontsize("standard")
 
     fig = plt.figure(figsize=(4 * n_feat + 0.5, 4))
 
@@ -574,9 +549,9 @@ def plot_mcvariance_mean(
     palette = sns.color_palette("Set2")
 
     if large_font:
-        _set_fontsize("large")
+        set_fontsize("large")
     else:
-        _set_fontsize("standard")
+        set_fontsize("standard")
 
     n_feat = len(feature_names)
     fig, axes = plt.subplots(

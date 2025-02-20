@@ -1,3 +1,8 @@
+"""
+This module contains functions to format dataframes for better readibility and
+to simplify plotting.
+"""
+
 from pathlib import Path
 from configparser import ConfigParser
 from typing import Literal

@@ -1,3 +1,7 @@
+"""
+This module contains utility functions for the simulation study.
+"""
+
 from configparser import ConfigParser
 import logging
 import warnings
@@ -263,11 +267,26 @@ def save_fe_results(fe_metrics: Dict, params: SimulationParameter, type: Literal
 
 
 def _warning_to_logger(message, category, filename, lineno, file=None, line=None):
-    # Convert warnings to logging messages
+    """
+    Convert warnings to log messages.
+    """
     logging.warning(f"{category.__name__} at {filename} - {lineno}: {message}")
 
 
 def setup_logger(log_dir: Path = Path("logs")):
+    """
+    Setup logging for main process.
+
+    Parameters
+    ----------
+    log_dir : Path, optional
+        Directory for log files, by default Path("logs")
+
+    Returns
+    -------
+    Tuple[multiprocessing.Queue, multiprocessing.QueueListener]
+        Tuple of logging queue and listener.
+    """
     # Create a queue for passing logging messages between processes
     queue = multiprocessing.Queue()
 
@@ -297,7 +316,9 @@ def setup_logger(log_dir: Path = Path("logs")):
 
 
 def configure_worker_logger(queue):
-    # Configure logging for worker processes
+    """
+    Configure logging for worker processes.
+    """
     logger = logging.getLogger()
     logger.handlers = []  # Remove any existing handlers
     logger.addHandler(QueueHandler(queue))

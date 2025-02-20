@@ -1,3 +1,7 @@
+"""
+This module contains classes and functions for generating synthetic data based on a groundtruth function.
+"""
+
 from abc import abstractmethod, ABC
 from typing import Callable, Literal, List, Optional, Tuple
 import warnings

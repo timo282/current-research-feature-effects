@@ -1,3 +1,9 @@
+"""
+This module contains several mappings: dataset name to groundtruth, model name to estimator, and suggested
+hyperparameters for each model, as well as a wrapper for a Generalized Additive Model (GAM) compatible with
+the sklearn API.
+"""
+
 from typing_extensions import List, Tuple, Literal
 from itertools import combinations
 import numpy as np

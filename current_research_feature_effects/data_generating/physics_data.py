@@ -1,3 +1,8 @@
+"""
+This module contains classes for generating data based on physics laws.
+Currently, the Feynman equations I.9.18 and I.29.16 are implemented.
+"""
+
 from typing import Callable
 import numpy as np
 import pandas as pd

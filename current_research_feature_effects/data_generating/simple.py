@@ -1,3 +1,7 @@
+"""
+This module contains three simple groundtruth classes for generating data based on simple formulas.
+"""
+
 from typing import Callable
 import pandas as pd
 import numpy as np
