@@ -8,7 +8,7 @@
 \usepackage{tabularx}
 \usepackage{hyperref}
 \usepackage{ragged2e}
-\usepackage{booktabs} 
+\usepackage{booktabs}
 \usepackage{subcaption}
 \usepackage[misc]{ifsym}
 \newcommand{\corr}{(\Letter)}
@@ -716,34 +716,36 @@ All other experimental details follow the setup of the main experiment.
 
 \section{Results}\label{sec:results}
 
-\subsection{Main Experiment}
+\subsection{Main Experiment Results}
 
-We give the results of the main experiment error decomposition for the
+We present the results of the main experiment error decomposition for the GAM and
+XGBoost models on the
 SimpleNormalCorrelated dataset in \textbf{Fig.\@~\ref{fig:pdp-results-snc}} for
 PDP and \textbf{Fig.\@~\ref{fig:ale-results-snc}} for ALE. The full results for  % chktex 13
 all datasets, models, and features can be found in
 \textsc{Appendix~\ref{app:additional-results}}.
 
-Generally, we observe that the feature effect error is in the most cases
-highest when the effect is estimated on validation data. For ALE, this
-observation is more pronounced than for PDP. This increase in error is mainly  % chktex 13
+Our analysis reveals that feature effect error is generally highest when the effect
+is estimated on validation data. For ALE, this
+observation is more pronounced than for PDP. The increase in error is mainly  % chktex 13
 due to an increase in variance (see e.g.,
 \textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-ot}} or
 \textbf{Fig.\@~\ref{fig:ale-results-snc-xgboost-of}}). For many models, the
-feature effect error is lowest when estimated in a cross-validated manner. This
+feature effect error is lowest when effects are estimated in a cross-validated manner. This
 is slightly more pronounced for overfitting models (OF) than for optimally
-tuned models (OT), and is mainly due to a decrease in variance (see e.g.,
+tuned models (OT), and mainly stems from a reduced variance (see e.g.,
 \textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-of}} and
-\textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-ot}}). Since the variance composes
-of the model variance and the Monte Carlo variance, both could be reduced by
-cross-validation. Monte Carlo variance may decrease as we have slightly more
-samples overall compared to the training set. Conversely, the model variance
-may decrease as it is averaged out through the cross-validation procedure,
-which may especially improve overfitting models that have a higher model
-variance. We further investigate these hypotheses in
+\textbf{Fig.\@~\ref{fig:pdp-results-snc-gam-ot}}). Since the variance is composed
+of model variance and Monte Carlo variance, cross-validation could potentially
+reduce each of these components. Monte Carlo variance may decrease due to
+the slightly larger effective sample size compared to using only the training set.
+Conversely, model variance
+may decrease as cross-validation averages out estimation variability across multiple
+models, which is particularly beneficial for overfitting models that typically exhibit
+higher model variance. We further investigate these hypotheses in
 \textsc{Section~\ref{sec:results-variance-decomposition}}.
 
-\begin{figure}[htbp]
+\begin{figure}[ht!]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_GAM_OF.png}
@@ -769,35 +771,30 @@ variance. We further investigate these hypotheses in
         \caption{XGBoost\_OT}
         \label{fig:pdp-results-snc-xgboost-ot}  % chktex 24
     \end{subfigure}
-    \\[10pt]
-    \vfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_pdp_SVM_OT.png}
-        \caption{SVM\_OT}
-        \label{fig:pdp-results-snc-svm-ot}  % chktex 24
-    \end{subfigure}
-    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset.\dots}
+    \caption{Main experiment results for PDP on SimpleNormalCorrelated dataset for GAM and
+        XGBoost models. The other models as well as the dummy features $x_3$ and $x_4$
+        are omitted for brevity.}
     \label{fig:pdp-results-snc}  % chktex 24
 \end{figure}
 
-Interestingly, for ALE, we observe for some cases an increased bias when
-estimating the feature effects on validation data and via cross-validation
+\noindent Interestingly, for ALE, we observe for some cases an increased bias when
+estimating the feature effects on validation data or through cross-validation
 compared to an estimation on training data (see e.g.,
-\textbf{Fig.\@~\ref{fig:ale-results-snc-xgboost-ot}} and
-\textbf{Fig.\@~\ref{fig:ale-results-snc-svm-ot}}). Note that this is only the
-case when errors are generally low, and the bias is still small in absolute
-terms. Since this only occurs for ALE and only for the smaller dataset size
-(1000 training samples, 250 validation samples), we hypothesize that this is
-due to our approach of choosing the intervals based on theoretical quantiles.
-For the smaller validation sets, we may have intervals with few or no samples,
-leading to a bias in the estimation of the effect. This hypothesis is supported
-by the fact that the increase in bias only occurs in regions with low sample
+\textbf{Fig.\@~\ref{fig:ale-results-snc-gam-ot}} and
+\textbf{Fig.\@~\ref{fig:ale-results-snc-xgboost-ot}}). However, this phenomenon
+occurs only when errors are generally low, and the bias is still small in absolute
+terms. Since this appears exclusively for ALE and only with smaller dataset sizes
+(1000 training samples, 250 validation samples), we hypothesize it stems from our
+approach of defining intervals based on theoretical quantiles.
+For smaller validation sets, this may result in intervals with few or no samples,
+introducing a bias in the estimation of the effect. This hypothesis is supported
+by the fact that the increased bias only occurs in regions with low sample
 density, which we demonstrate in
 \textsc{Appendix~\ref{app:main-study-further-investigation}}. Thus, an open
-question remains whether choosing the intervals based on the empirical
-quantiles mitigates this issue.
+question remains whether the practical approach of choosing intervals based on
+empirical quantiles would mitigate this issue.
 
-\begin{figure}[htbp]
+\begin{figure}[ht!]
     \centering
     \begin{subfigure}[b]{0.49\textwidth}
         \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_GAM_OF.png}
@@ -823,59 +820,53 @@ quantiles mitigates this issue.
         \caption{XGBoost\_OT}
         \label{fig:ale-results-snc-xgboost-ot}  % chktex 24
     \end{subfigure}
-    \\[10pt]
-    \vfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \includegraphics[width=\textwidth]{img/SNC/feature_effect_errors_ale_SVM_OT.png}
-        \caption{SVM\_OT}
-        \label{fig:ale-results-snc-svm-ot}  % chktex 24
-    \end{subfigure}
-    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset.\dots}
+    \caption{Main experiment results for ALE on SimpleNormalCorrelated dataset for GAM and
+    XGBoost models. The other models as well as the dummy features $x_3$ and $x_4$
+    are omitted for brevity.}
     \label{fig:ale-results-snc}  % chktex 24
 \end{figure}
 
 Overall, we find no evidence against the currently dominant practice of
 estimating feature effects on training data. Further results on Friedman1 and
-Feynman I.29.16, as well as for the dummy features, largely confirm our
+Feynman I.29.16, as well as for the dummy features and the SVM largely confirm our
 described findings. For details, we refer to
-\textsc{Appendix~\ref{app:additional-results}}. This also means that we observe
+\textsc{Appendix~\ref{app:additional-results}}. This implies that we observe
 no substantial differences between scenarios with correlated features
 (SimpleNormalCorrelated) and independent features (Friedman1, Feynman I.29.16).
-Similarly, the more real-world relevant Feynman I.29.16 dataset shows results
+Similarly, the more real-world relevant Feynman I.29.16 dataset produces results
 in line with the other datasets. Note that we only observe one case where the
 error of ALE is substantially larger when estimated on training data due to a
 high bias. This occurs for the XGBoost\_OF model on the Friedman1 dataset,
-which we further look into in
+which we further examine in
 \textsc{Appendix~\ref{app:main-study-further-investigation}}.
 
 \subsection{Ablation Study Results: Variance Decomposition}\label{sec:results-variance-decomposition}
 
-We use the variance results from the main experiment and the Monte Carlo
-variance estimated in the ablation study to show the decomposition of the
-feature effect variance into model variance and Monte Carlo variance. The
-results for the Friedman1 dataset are given in
+Using variance results from the main experiment and Monte Carlo variance estimates
+from our ablation study, we decompose feature effect variance into its model
+variance and Monte Carlo variance components.
+Results for the Friedman1 dataset are presented in
 \textbf{Fig.\@~\ref{fig:pdp-variance-decomp}} for PDP and
 \textbf{Fig.\@~\ref{fig:ale-variance-decomp}} for ALE. Note that we now  % chktex 13
-consider the Friedman1 dataset as it provides a wider variety of different
-feature effects. The full results including the other datasets are provided in
+focus on Friedman1 as it offers a wider range of different
+feature effects. Full results including the other datasets are provided in
 \textsc{Appendix~\ref{app:additional-variance-decomposition}}.
 
-We observe that the Monte Carlo variance is generally highest when the feature
+Our analysis reveals that Monte Carlo variance is consistently highest when feature
 effects are estimated on the smaller validation set, which aligns with our
-expectations. Computing the feature effects in a cross-validated manner leads
-to the lowest Monte Carlo variance with a substantial reduction compared to
-estimation solely on training or validation data.
+expectations. Cross-validated estimation yields the lowest Monte Carlo variance with
+a substantial reduction compared to
+estimation on either training or validation data alone.
 
-In addition, we observe that the model variance is also reduced in many cases when
-estimating the feature effects in a cross-validated manner compared to an estimation
-on training or validation data, where model variance is (roughly) the same. The observed
-reduction through cross-validation is especially
+Additionally, model variance is also reduced in many cases through cross-validation
+compared to estimation on training or validation data, where model variance is
+approximately equal. The observed reduction through cross-validation is especially
 pronounced for the overfitting models (OF) and best visible for PDP
 (\textbf{Fig.\@~\ref{fig:pdp-variance-decomp}}). These observations are in line
-with our previous hypothesis that cross-validation reduces both model variance by averaging over
-different models as well as Monte Carlo variance by averaging over different
-samples. This is especially beneficial for overfitting models, which have a
-higher model variance.
+with our previous hypotheses that cross-validation reduces both model variance
+(by averaging across different models) and Monte Carlo variance (by leveraging
+different samples). This is particularly beneficial for overfitting models, which
+typically exhibit higher model variance.
 
 \begin{figure}[htbp]
     \centering
@@ -890,24 +881,25 @@ higher model variance.
         \caption{XGBoost\_OT PDP on Friedman1}
     \end{subfigure}
     \caption{Variance decomposition results for PDP on Friedman1 dataset. Variance is taken from the
-        main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
-        obtained by subtracting the Monte Carlo variance from the total variance. The second linear feature
+        main experiment, Monte Carlo variance is estimated in the ablation study. Model variance is
+        obtained by subtracting Monte Carlo variance from total variance. The second linear feature
         ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability. Results for XGBoost\_OT
         on 8000 training samples were not obtained due to excessive computation time.}
     \label{fig:pdp-variance-decomp}  % chktex 24
 \end{figure}
 
-While the variance due to MC integration is only a minor component of the total
-variance for PDP, it is the dominant component for ALE. Only for feature effect  % chktex 13
-estimation via cross-validation, the Monte Carlo variance is again reduced to a
-negligible level. This suggests that ALE is more sensitive to the dataset size
+\noindent We observe a striking difference between PDP and ALE:\@ while Monte Carlo
+variance represents only a minor component of total variance for PDP, it dominates
+the variance composition for ALE. Only with cross-validated estimation,  % chktex 13
+ALE's Monte Carlo variance is reduces to a negligible level. This suggests that
+ALE is more sensitive to the dataset size
 than PDP, which we further investigate in
-\textsc{Section~\ref{sec:results-dataset-size}}. We also suspect a certain
-amount of inaccuracy in the Monte Carlo variance estimation for ALE, which (a)
-leads to differences in the model variance between training and validation set
-and (b) causes the model variance to become negative in some cases (see
-\textbf{Fig.\@\ref{fig:ale-variance-decomp}}). Naturally, this is not possible
-and can most likely be attributed to numerical inaccuracies in the MC variance
+\textsc{Section~\ref{sec:results-dataset-size}}. We note some potential inaccuracies
+in Monte Carlo variance estimation for ALE, which manifest as: (a) differences
+in model variance between training and validation sets, and (b) negative model
+variance values in certain cases (see
+\textbf{Fig.\@\ref{fig:ale-variance-decomp}}). Since negative variance is theoretically
+impossible, we attribute these artifacts to numerical imprecisions in Monte Carlo variance
 estimation.
 
 \begin{figure}[htbp]
@@ -923,42 +915,42 @@ estimation.
         \caption{XGBoost\_OT ALE on Friedman1}
     \end{subfigure}
     \caption{Variance decomposition results for ALE on Friedman1 dataset. Variance is taken from the
-        main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
-        obtained by subtracting the Monte Carlo variance from the total variance. The second linear feature
+        main experiment, Monte Carlo variance is estimated in the ablation study. Model variance is
+        obtained by subtracting Monte Carlo variance from total variance. The second linear feature
         ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability. Results for XGBoost\_OT
-        on 8000 training samples were not obtained due to excessive computation time. Negative variances are
-        due to numerical inaccuracies, marked by the hatch pattern.}
+        on 8000 training samples were not obtained due to excessive computation time. Negative variances, marked
+        by the hatch pattern, are due to numerical inaccuracies.}
     \label{fig:ale-variance-decomp}  % chktex 24
 \end{figure}
 
-For both PDP and ALE, we find that the Monte Carlo variance, as expected,
-reduces with larger dataset size. This becomes clear both when comparing
+\noindent For both PDP and ALE, we find that the Monte Carlo variance, as expected,
+reduces with larger dataset size. This becomes clear both when contrasting
 training and validation data and when comparing the two dataset sizes (1000 and
-8000 samples). To analyze this not only for those few dataset sizes, we
-dedicate a separate ablation study to investigate this further in the next
-section.
+8000 samples). We systematically analyze this relationship across a broader range
+of dataset sizes in the next section.
 
 \subsection{Ablation Study Results: Impact of Dataset Size on Monte Carlo Variance}\label{sec:results-dataset-size}
 
-We show the effect of the dataset size on the Monte Carlo variance for the
-features of the Friedman1 dataset for PDP and ALE in
-\textbf{Fig.\@~\ref{fig:mc-variance}}. The full results are provided in
+We show the effect of dataset size on Monte Carlo variance for four features
+of the Friedman1 dataset for PDP and ALE in
+\textbf{Fig.\@~\ref{fig:mc-variance}}. Complete results are provided in
 \textsc{Appendix~\ref{app:additional-mc-results}}. As expected, we observe that
-the Monte Carlo variance decreases with increasing dataset size (except for
-$x_3$ and $x_4$ for PDP, where the variance is generally very small). We
-find differences between the features: for more complex features like $x_1$ and
-$x_2$, which include interactions, the Monte Carlo variance is generally higher
-compared to simpler features like $x_3$ and $x_4$. Nonetheless, we observe an
-interesting difference between PDP and ALE. While they converge to a similar  % chktex 13
-Monte Carlo variance for large dataset sizes, the initial Monte Carlo variance
-for very small sample sizes is substantially higher for ALE than for PDP. This  % chktex 13
-demonstrates that ALE is more sensitive to the dataset size than PDP. This is  % chktex 13
+Monte Carlo variance generally decreases with increasing dataset size, with exceptions
+for PDP on features $x_3$ and $x_4$ where variance remains consistently low across all sample sizes.
+We observe feature-specific patterns: more complex features with interactions ($x_1$ and $x_2$)
+exhibit higher Monte Carlo variance compared to simpler features ($x_3$ and $x_4$).
+
+A striking difference emerges between PDP and ALE estimation methods. While both converge
+to similar Monte Carlo variance levels with large datasets, ALE exhibits substantially
+higher variance with small sample sizes. This
+demonstrates that ALE is more sensitive to dataset size compared to PDP. This is  % chktex 13
 most likely due to the fact that ALE estimates effects per interval and thus
-requires more samples to estimate the effect accurately compared to PDP, which
-uses the full dataset to estimate the effect. Note that this analysis
-also proves that the Monte Carlo variance introduced by estimating the ground truth
-feature effects in the main study is for most cases negligible compared to the
-other error sources.
+requires more samples to estimate the effect accurately, whereas PDP
+uses the full dataset to estimate the effect per grid point.
+
+This analysis also confirms that the Monte Carlo variance introduced by our ground truth
+feature effect estimation in the main study is negligible compared to other error sources
+for most scenarios.
 
 \begin{figure*}[h!]
     \centering
@@ -978,47 +970,46 @@ other error sources.
     \end{subfigure}
     \caption{Mean Monte Carlo variance for PDP and ALE on Friedman1 dataset.
         For each data size $n_{mc}$, variances are averaged over all grid points.
-        Second linear feature ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability.}
+        The second linear feature ($x_5$) and dummy features ($x_6$, $x_7$) are omitted for better readability.}
     \label{fig:mc-variance}  % chktex 24
 \end{figure*}
 
-In addition, a detailed analysis of the Monte Carlo variance per grid point
-reveals that for PDP, the variance mostly depends on the sample density, while
-for ALE, the variance is also influenced by the shape of the underlying
-function. We provide detailed results in
-\textsc{Appendix~\ref{app:additional-mc-results}}.
+\noindent Further analysis of the Monte Carlo variance per grid point
+reveals distinct patterns: for PDP, Monte Carlo variance is
+primarily influenced by sample density and shows larger values
+at distribution edges, while ALE variance mostly depends on 
+the underlying function's shape. We provide detailed grid point-level
+results in \textsc{Appendix~\ref{app:additional-mc-results}}.
 
-\clearpage
+
 \section{Conclusions}\label{sec:conclusion}
 
 \subsection{Summary \& Discussion}
 
-Summarizing our main contributions, we (1) empirically investigated the
-impact of dataset choice for feature effect estimation. We (2) based our study on
-a theoretical framework that decomposes the feature effect error into different
-components and introduces estimators for each of them. We (3) conducted a
-review of test functions for simulation studies and build the choices for
-our study on these.
+Summarizing our main contributions, we (1) empirically investigated the impact of
+dataset choice for feature effect estimation, (2) embedded in a theoretical framework
+for decomposing feature effect error into distinct components with corresponding estimators,
+and (3) conducted a review of test functions for simulation studies to inform our experimental design.
 
-Our comprehensive simulation study provided several key insights into
+Our comprehensive simulation study provided several key insights regarding 
 the choice of dataset for feature effect estimation. First and foremost,
-we find no general evidence that speaks against the current predominant practice
-of using training data for computing feature effects. This is an important validation
-of existing approaches in the literature.
+we found no general evidence that speaks against the current predominant practice
+of using training data for estimating feature effects. This is an important validation
+of existing approaches.
 
 More specifically, our results demonstrated that feature effect errors are
-generally lower when more data is available for the estimation, which is usually
+generally lower when more data is available for estimation, which is usually
 the case for the training set. This is primarily due to reduced Monte Carlo variance,
 as shown in our ablation studies. The effect is particularly pronounced for ALE plots,
-which exhibit higher sensitivity to dataset size compared to PDPs, especially for smaller samples,
-due to the interval-based estimation. This suggests that for ALE plots, it is even more
+which exhibit higher sensitivity to dataset size compared to PDPs, especially for smaller sample
+sizes, due to interval-based estimation. This suggests that for ALE plots, it is even more
 important to use a sufficently large dataset for accurate estimation. Based on these
 findings, we generally recommend using the largest available dataset for feature effect
 estimation, as long as this is computationally feasible.
 
 An interesting finding emerged regarding cross-validation for feature effect estimation.
-Our main study suggests that cross-validation is preferable in many scenarios,
-leading to lower overall errors. The ablation study reveals that this improvement stems from two distinct mechanisms:
+Our main study results suggest that cross-validation is preferable in many scenarios,
+leading to lower overall errors. The ablation study revealed that this improvement stems from two distinct mechanisms:
 (1) reduced Monte Carlo variance, and (2) reduced model variance through the averaging of estimates from different models.
 This dual benefit is particularly advantageous for overfitting models, which typically suffer
 from higher variance. Therefore, we recommend using cross-validation for feature effect estimation
@@ -1028,8 +1019,8 @@ or using cross-validation also becomes a trade-off between computation time and 
 feature effect estimation, as cross-validation comes with computational overhead depending
 on the number of folds.
 
-We also observed that the correlation structure between features appears to have limited impact on our findings
-and are largely consistent across our set of different, diverse datasets.
+We also observed that the correlation structure between features appears to have limited impact on our findings,
+which are largely consistent across our set of different, diverse datasets.
 This suggests that our recommendations are robust across different data scenarios,
 including those with complex feature interactions, correlations, 
 and real-world inspired relationships as in the Feynman dataset.
@@ -1041,12 +1032,11 @@ for future research remain. One methodological limitation lies in our choice of 
 theoretical quantiles for the grid points in feature effect estimation to make feature
 effects comparable. However, this can lead to empty or sparsely populated intervals, particularly for smaller
 datasets or in regions of low data density. Moreover, this approach has limited real-world
-applicability, as we usually do not now the theoretical but only the empirical quantiles
-(which should be the same in expectation).
+applicability, as we usually do not now the theoretical but only the empirical quantiles.
 
 Furthermore, the observed instabilities in variance estimation for the Monte Carlo variance,
 particularly of ALE plots, indicate room for methodological improvements. Future research may
-focus on developing more robust estimation procedures for decomposing variance components,
+focus on developing more better estimation procedures for decomposing variance components,
 before applying these estimators to address other research questions.
 
 Another limitation of our study lies in the pre-selection of (optimal) model hyperparameters.
@@ -1059,35 +1049,26 @@ Further, it is important to note that our study primarily adopts a ``true to the
 when defining feature effect errors, focusing on explaining the underlying data-generating process
 rather than the model's internal representation. While this choice aligns with many practical
 applications, there are also use cases for which ``true to the model'' interpretations might be 
-preferred, which is not considered in our analysis.
+preferred.
 % also: data choice only with regard to feature effect error, not uncertainty estimation
-
-Future research could also investigate the impact of data shifts between training and validation sets.
-While our focused considered overfitting models, future work could explore the impact of data shifts
-between training and validation sets and their impact on feature effect estimation, analyzing the
-robustness of the estimation under distribution shifts.
 
 Moreover, while our cross-validation strategy showed promising improvements over
 conventional estimation on a single dataset, this approach could be enhanced further.
-Future research could explore strategies that utilize more data per fold, such as using the
-training set in each fold for feature effect estimation (and use the validation part only for
-perfomance estimation) or combining training and validation splits. Alternatively, bootstrapping
-strategies similar to the approaches pursued by Molnar et al.~\cite{molnar_relating_2023} could be
+Future research could explore strategies that utilize more data per fold such as using the
+training set in each fold for feature effect estimation (and validation only for e.g.\ perfomance estimation).
+Alternatively, bootstrapping strategies similar to the approaches pursued in~\cite{molnar_relating_2023} could be
 explored.
 
-Following the observations of Loecher~\cite{loecher_debiasing_2024} that hat MDI and SHAP show
+Following the observations of Loecher~\cite{loecher_debiasing_2024} that MDI and SHAP show
 a bias toward high-entropy variables for Random Forests, future work might also investigate if and how
 feature entropy and cardinality influence feature effect estimation.
 
 While we aimed to incorporate real-world relevance through physics-inspired datasets, further
 work is needed to fully capture the complexity of practical applications. In practice, datasets
 have features with varying and also just partial effect strengths, different noise levels,
-higher-order interactions, and diverse marginal distributions. Future work could focus on
+higher-order interactions, and diverse marginal distributions. Future work should focus on
 developing more realistic datasets capturing these aspects, to further bridge the gap between
 research, such as simulation studies, and practical applications.
-
-These limitations and future directions highlight the rich opportunities for further research
-in this area to obtain practically relevant insights.
 
 \begin{credits}
     % \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is used for
@@ -1123,7 +1104,8 @@ in this area to obtain practically relevant insights.
          & \quad + \text{Var}_F(\mathbb{E}_X[\widehat{PDP}_{\hat f}]) + \mathbb{E}_F{(\mathbb{E}_X[\widehat{PDP}_{\hat f}])}^2          \\
          & = PDP_f^2 - 2PDP_f\mathbb{E}_F[PDP_{\hat f}] +  Var_F[PDP_{\hat f}]                                                          \\
          & \quad + \mathbb{E}_F{[PDP_{\hat f}]}^2 + \mathbb{E}_F\text{Var}_X[\widehat{PDP}_{\hat f}]                                    \\
-         & = {(PDP_f - \mathbb{E}_F[PDP_{\hat f}])}^2 + \text{Var}_F[PDP_{\hat f}] + \mathbb{E}_F[\text{Var}_X(\widehat{PDP}_{\hat f})]
+         & = {(PDP_f - \mathbb{E}_F[PDP_{\hat f}])}^2 + \text{Var}_F[PDP_{\hat f}] \\
+         &\quad + \mathbb{E}_F[\text{Var}_X(\widehat{PDP}_{\hat f})]
     \end{align*}
 
     \noindent At multiple points, we use the fact that $\mathbb{E}_X[\widehat{PDP}_{\hat f}]
@@ -1154,7 +1136,7 @@ in this area to obtain practically relevant insights.
 \section{Model Hyperparameters and Performance}\label{app:model-hps-perf}
 In this appendix, we give details on the models used in the simulation study.
 Specifically, we provide details on the hyperparameter selection and the
-finally used hyperparameters, as well as the performance of the models.
+finally used hyperparameters, as well as the performances of the models.
 
 \subsection{Hyperparameters}
 
@@ -1170,7 +1152,7 @@ The optimal hyperparameters (OT) were chosen by tuning the models on a separate
 data sample. Training and validation data were sampled independently from the
 correspondings DGPs, with a training size of $n_{train}$ and a validation size
 of 10000 to get a reliable performance estimate. While this scenario is
-unrealistic in practice, it allows as to consider hyperparameters as
+unrealistic in practice, it allows us to consider hyperparameters as
 ``pre-selected'' and avoid costly nested resampling strategies for the
 simulation study. Each model was tuned for 200 trials using a
 \textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra2011algorithms}
@@ -1234,15 +1216,15 @@ R2-score).
 
 To ensure that the models perform as expected, we evaluate their performance
 both on the training data and a holdout test data with the latter consisting of
-10000 samples to get a reliable performance estimate. The performances
+10000 samples to get a reliable performance estimate. The performances (R2-scores)
 evaluated over the 30 repetitions are aggregated in
-\textbf{Fig.~\ref{fig:model-performance}} showing the R2-scores. As intended,
+\textbf{Fig.~\ref{fig:model-performance}}. As intended,
 the overfitting models perform better on the training data than the optimally
 tuned models, while being outperformed on the holdout test data and also
 exhibiting higher variance in their generalization performance. Note that the
-linear regression model serves only as a baseline. The overfitted SVM (SVM\_OF)
+linear regression model serves only as a baseline. The overfitted SVMs (SVM\_OF)
 show substantially worse performances on test data compared to the other
-models. Therefore, we excluded it from further analysis.
+models. Therefore, we do not discuss them in more detail in our analyses.
 
 \begin{figure*}[h!]
     \centering
@@ -1265,7 +1247,8 @@ models. Therefore, we excluded it from further analysis.
         \includegraphics[width=0.9\textwidth]{img/model_performance_FeynmanI.29.16.png}
         \caption{Model performances on Feynman I.29.16}
     \end{subfigure}
-    \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right). Each boxplot aggregates 30 repetitions with differing seeds for the data generation (cf.\ \textsc{Section~\ref{sec:experiment-main}}).}
+    \caption{R2-scores of the models evaluated on training samples (left) and 10000 holdout test samples (right).
+    Each boxplot aggregates 30 repetitions with differing seeds for data generation (cf.\ \textsc{Section~\ref{sec:experiment-main}}).}
     \label{fig:model-performance}  % chktex 24
 \end{figure*}
 
@@ -1273,7 +1256,7 @@ models. Therefore, we excluded it from further analysis.
 \section{Derivation and Visualization of Analytical Ground Truth Feature Effects}\label{app:ground-truth-feature-effects}
 In the following, we derive the analytical ground truth PDPs and ALEs for the
 considered datasets. In addition, we provide visualizations of the derived
-feature effects and compare them to the estimated feature effects as gut check.
+feature effects and compare them to the estimated feature effects as verification.
 
 \subsection{SimpleNormalCorrelated Dataset}
 
@@ -1281,18 +1264,18 @@ feature effects and compare them to the estimated feature effects as gut check.
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
         \includegraphics[width=\textwidth]{img/SNC-all/pdp_groundtruth_comparison.png}
-        \caption{PDP ground truth of SimpleNormalCorrelated}
+        \caption{PDP ground truth}
     \end{subfigure}
     \begin{subfigure}[b]{0.49\textwidth}
         \centering
         \includegraphics[width=\textwidth]{img/SNC-all/ale_groundtruth_comparison.png}
-        \caption{ALE ground truth of SimpleNormalCorrelated}
+        \caption{ALE ground truth}
     \end{subfigure}
     \caption{Ground truth feature effects for SimpleNormalCorrelated dataset. The green line
     represents the analytically derived ground truth, the orange line the estimated feature
     effect on the ground truth function using 10000 Monte Carlo samples. Note that both
-    are centered that the average effect at the quantile-based grid points is 0.
-    Since $x_3$ and $x_4$, are dummy variables, they have a constant effect of 0 and are
+    are centered to mean 0 over the quantile-based grid-points.
+    Since $x_3$ and $x_4$ are dummy variables, they have a constant effect of 0 and are
     thus omitted.}
     \label{fig:snc-groundtruth}  % chktex 24
 \end{figure*}
@@ -1308,7 +1291,7 @@ arbitrary constants with $C$ and $C^\prime$, respectively.
                  &= x_1 + \frac{1}{2} (Var_{X_2}(X_2) + \mathbb{E}_{X_2}[X_2]^2) + x_1 \mathbb{E}_{X_2}[X_2] \\
                  &= x_1 + \frac{1}{2} (\sigma_2^2 + \mu_2^2) + x_1 \mu_2 \\
                  &= x_1 + \frac{1}{2} \\
-                 &= x_1 + C_1
+                 &= x_1 + C
 \end{align*}
 
 \begin{align*}
@@ -1319,104 +1302,32 @@ arbitrary constants with $C$ and $C^\prime$, respectively.
 \end{align*}
 
 \begin{align*}
-    ALE_{f,1}(x_1) &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[\frac{\partial}{\partial X_1} X_1 + 0.5 X_2^2 + X_1X_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
-    &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + X_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
+    ALE_{f,1}(x_1) &= \int_{x_{\min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[\frac{\partial}{\partial X_1} X_1 + 0.5 X_2^2 + X_1X_2 \Big| X_1=z_1\right] dz_1 - C \\
+    &= \int_{x_{\min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + X_2 \Big| X_1=z_1\right] dz_1 - C \\
     &(\text{using } X_2 = \beta_{2|1}(X_1-\mu_1) + \varepsilon_1 + \mu_2\text{, where } \beta_{2|1}=\rho \frac{\sigma_2}{\sigma_1}) \\
-    &= \int_{x_{min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + \beta_{2|1}(X_1-\mu_1) + + \varepsilon_1 + \mu_2 \Big| X_1=z_1\right] dz_1 - C_1 \\
-    &= \int_{x_{min,1}}^{x_1} 1 + \beta_{2|1}(z_1-\mu_1) + \mu_2 \,dz_1 - C_1 \\
-    &= [z_1 + \frac{1}{2}\beta_{2|1}(z_1-\mu_1)^2 + \mu_2 z_1]_{x_{min,1}}^{x_1} - C_1 \\
+    &= \int_{x_{\min,1}}^{x_1} \mathbb{E}_{X_2|X_1}\left[1 + \beta_{2|1}(X_1-\mu_1) + \varepsilon_1 + \mu_2 \Big| X_1=z_1\right] dz_1 - C \\
+    &= \int_{x_{\min,1}}^{x_1} 1 + \beta_{2|1}(z_1-\mu_1) + \mu_2 \,dz_1 - C \\
+    &= [z_1 + \frac{1}{2}\beta_{2|1}(z_1-\mu_1)^2 + \mu_2 z_1]_{x_{\min,1}}^{x_1} - C \\
     &= x_1 + \frac{\beta_{2|1}}{2}(x_1-\mu_1)^2 + \mu_2 x_1 \\
-    & \quad - x_{min,1} - \frac{\beta_{2|1}}{2}(x_{min,1}-\mu_1)^2 - \mu_2 x_{min,1} - C_1 \\
-    % &= (1 + \mu_2) \cdot (x_1 - x_{min,1}) + \frac{\beta_{2|1}}{2} \cdot ((x_1-\mu_1)^2 - (x_{min,1}-\mu_1)^2) - C \\
-    % &= (1 + \mu_2) \cdot (x_1 - x_{min,1}) + \frac{\beta_{2|1}}{2} \cdot (x_1^2 - 2\mu_1 x_1 - x_{min,1}^2 + 2\mu_1 x_{min,1}) - C \\
-    &= (1 + \mu_2) x_1 - (1 + \mu_2) x_{min,1} + \frac{\beta_{2|1}}{2} x_1^2 - \frac{\beta_{2|1}}{2} x_{min,1}^2 \\
-    & \quad - \mu_1 \beta_{2|1} x_1 - \mu_1 \beta_{2|1}  x_{min,1} - C_1 \\
-    &= \frac{\beta_{2|1}}{2} x_1^2 + (1 + \mu_2 - \mu_1 \beta_{2|1}) x_1 - C_1^\prime \\
-    &= 0.45 x_1^2 + x_1 - C_1^\prime
+    & \quad - x_{\min,1} - \frac{\beta_{2|1}}{2}(x_{\min,1}-\mu_1)^2 - \mu_2 x_{\min,1} - C \\
+    % &= (1 + \mu_2) \cdot (x_1 - x_{\min,1}) + \frac{\beta_{2|1}}{2} \cdot ((x_1-\mu_1)^2 - (x_{\min,1}-\mu_1)^2) - C \\
+    % &= (1 + \mu_2) \cdot (x_1 - x_{\min,1}) + \frac{\beta_{2|1}}{2} \cdot (x_1^2 - 2\mu_1 x_1 - x_{\min,1}^2 + 2\mu_1 x_{\min,1}) - C \\
+    &= (1 + \mu_2) x_1 - (1 + \mu_2) x_{\min,1} + \frac{\beta_{2|1}}{2} x_1^2 - \frac{\beta_{2|1}}{2} x_{\min,1}^2 \\
+    & \quad - \mu_1 \beta_{2|1} x_1 - \mu_1 \beta_{2|1}  x_{\min,1} - C \\
+    &= \frac{\beta_{2|1}}{2} x_1^2 + (1 + \mu_2 - \mu_1 \beta_{2|1}) x_1 - C^\prime \\
+    &= 0.45 x_1^2 + x_1 - C^\prime
 \end{align*}
 \\
 
 \noindent With anologous calculations, we get:
 
 \begin{align*}
-    ALE_{f,2}(x_2) &= (\frac{1}{2} + \mu_1 + \frac{\beta_{1|2}}{2}) x_2^2 - \beta_{1|2} \mu_2 x_2 - C_2^\prime \\
-    &= 0.95 x_2^2 - C_2^\prime
+    ALE_{f,2}(x_2) &= (\frac{1}{2} + \mu_1 + \frac{\beta_{1|2}}{2}) x_2^2 - \beta_{1|2} \mu_2 x_2 - C^\prime \\
+    &= 0.95 x_2^2 - C^\prime
 \end{align*}
 
 
 \subsection{Friedman1 Dataset}
-
-For Friedman1, we use independent uniformly distributed features between 0
-and 1. Thus, all features $S$ have $\mu_S = \mathbb{E}[X_S]=\frac{a+b}{2}=0.5$ and
-$\sigma_S^2 = Var[X]=\frac{(b-a)^2}{12}=\frac{1}{12}$.
-Si denotes the sine integral function, $C_S$ and $C_S^\prime$ are arbitrary constants.
-
-\begin{align*}
-    PDP_{f,1}(x_1) &= \mathbb{E}_{-X_1}[10\sin(\pi x_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 + 5X_5] \\
-    &= 10 \mathbb{E}_{X_2}[\sin(\pi x_1X_2)] + 20(\mathbb{E}_{X_3}[X_3^2] - \mathbb{E}_{X_3}[X_3] + \frac{1}{4}) + 10 \mathbb{E}_{X_4}[X_4] \\
-    &\quad + 5 \mathbb{E}_{X_5}[X_5]\\
-    &= 10 \cdot \int_{a}^{b} \sin(\pi x_1x_2)dx_2 + 20\cdot(\mu_3^2 + \sigma_3^2 - \mu_3 + \frac{1}{4}) + 10\mu_4 + 5\mu_5 \\
-    &= 10 \cdot \frac{-\cos(\pi bx_1) + \cos(\pi ax_1)}{\pi x_1} + 20(\mu_3^2 + \sigma_3^2 - \mu_3) + 5 + 10\mu_4 + 5\mu_5 \\
-    &= 10 \cdot \frac{-\cos(\pi x_1) + 1}{\pi x_1} + C_1 \\
-\end{align*}
-
-\noindent Analogously, we get for $x_2$:
-
-\begin{align*}
-    PDP_{f,2}(x_2) &= 10 \cdot \frac{-\cos(\pi x_2) + 1}{\pi x_2} + C_2
-\end{align*}
-    
-\begin{align*}
-    PDP_{f,3}(x_3) &= \mathbb{E}_{-X_3}[10\sin(\pi X_1X_2) + 20(x_3-\frac{1}{2})^2 + 10X_4 + 5X_4] \\
-    &= 10\int_{a_1}^{b_1}\int_{a_2}^{b_2}\sin(\pi x_1x_2)dx_2dx_1 + 20(x_3-\frac{1}{2})^2 + 10\mu_4 + 5\mu_5 \\
-    &= \frac{10}{\pi}[Si(\pi b_1a_2) - Si(\pi a_1a_2) - Si(\pi b_1b_2) + Si(\pi a_1b_2)] \\
-    &\quad + 20x_3^2 - 20x_3 + 5 + 10\mu_4 + 5\mu_5 \\
-    &= 20x_3^2 - 20x_3 + C_3 \\
-\end{align*}
-
-\noindent Since Si is not defined at 0, we use a small $\epsilon$ for
-computational stability.\newline
-Analogously, we get for $x_4$, $x_5$:
-
-\begin{align*}
-    PDP_{f,4}(x_4) &= 10x_4 + C_4
-\end{align*}
-
-\begin{align*}
-    PDP_{f,2}(x_2) &= 5x_5 + C_5
-\end{align*}
-
-\begin{align*}
-    ALE_{f,1}(x_1) &= \dots
-\end{align*}
-
-\begin{align*}
-    ALE_{f,2}(x_2) &= \dots
-\end{align*}
-
-\begin{align*}
-    ALE_{f,3}(x_3) &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\Bigg[\frac{\partial}{\partial x_3}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
-    &\qquad\qquad\qquad\qquad\qquad \Bigg. + 5X_5) \big|X_3=z_3\Bigg]dz_3 - C_3 \\
-    &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\left[40z_3-20\right]dz_3 - C_3 \\
-    &= \int_{x_{3,\min}}^{x_3} 40z_3-20dz_3 - C_3 \\
-    &= \left[20z_3^2 - 20z_3\right]_{x_{3,\min}}^{x_3} - C_3 \\
-    &= 20x_3^2 - 20x_3 - 20x_{3,\min}^2 + 20x_{3,\min} - C_3 \\
-    &= 20x_3^2 - 20x_3 - C_3^\prime
-\end{align*}
-    
-\begin{align*}
-    ALE_{f,4}(x_4) &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-X_4|X_4}\Bigg[\frac{\partial}{\partial x_4}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
-    &\qquad\qquad\qquad\qquad\qquad \Bigg. {} + 5X_5) \big|X_4=z_4\Bigg]dz_4 - C_4 \\
-    &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-x_4|x_4}\left[10\right]dz_4 - C_4 \\
-    &= 10x_4 - 10x_{4,\min} - C_4 \\
-    &= 10x_4 - C_4^\prime
-\end{align*}
-
-\noindent Analogously, we get for $x_5$:
-    
-\begin{align*}
-    ALE_{f,5}(x_5) &= 5x_5 - C_5^\prime
-\end{align*}
 
 \begin{figure*}[h!]
     \begin{subfigure}[b]{\textwidth}
@@ -1432,13 +1343,107 @@ Analogously, we get for $x_4$, $x_5$:
     \caption{Ground truth feature effects for Friedman1 dataset. The green line
     represents the analytically derived ground truth, the orange line the estimated feature
     effect on the ground truth function using 10000 Monte Carlo samples. Note that both
-    are centered that the average effect at the quantile-based grid points is 0.
+    are centered to mean 0 over the quantile-based grid-points.
     Since $x_6$ and $x_7$, are dummy variables, they have a constant effect of 0 and are
     thus omitted.}
     \label{fig:friedman1-groundtruth}  % chktex 24
 \end{figure*}
 
+For Friedman1, we use independent uniformly distributed features between 0
+and 1. Thus, all features $S$ have $\mu_S = \mathbb{E}[X_S]=\frac{a+b}{2}=0.5$ and
+$\sigma_S^2 = Var[X]=\frac{(b-a)^2}{12}=\frac{1}{12}$.
+Si denotes the sine integral function, $C$ and $C^\prime$ are arbitrary constants.
 
+\begin{align*}
+    PDP_{f,1}(x_1) &= \mathbb{E}_{-X_1}[10\sin(\pi x_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 + 5X_5] \\
+    &= 10 \mathbb{E}_{X_2}[\sin(\pi x_1X_2)] + 20(\mathbb{E}_{X_3}[X_3^2] - \mathbb{E}_{X_3}[X_3] + \frac{1}{4}) + 10 \mathbb{E}_{X_4}[X_4] \\
+    &\quad + 5 \mathbb{E}_{X_5}[X_5]\\
+    &= 10 \cdot \int_{a}^{b} \sin(\pi x_1x_2)dx_2 + 20\cdot(\mu_3^2 + \sigma_3^2 - \mu_3 + \frac{1}{4}) + 10\mu_4 + 5\mu_5 \\
+    &= 10 \cdot \frac{-\cos(\pi bx_1) + \cos(\pi ax_1)}{\pi x_1} + 20(\mu_3^2 + \sigma_3^2 - \mu_3) + 5 + 10\mu_4 + 5\mu_5 \\
+    &= 10 \cdot \frac{-\cos(\pi x_1) + 1}{\pi x_1} + C \\
+\end{align*}
+
+\newpage
+\noindent Analogously, we get for $x_2$:
+
+\begin{align*}
+    PDP_{f,2}(x_2) &= 10 \cdot \frac{-\cos(\pi x_2) + 1}{\pi x_2} + C
+\end{align*}
+    
+\begin{align*}
+    PDP_{f,3}(x_3) &= \mathbb{E}_{-X_3}[10\sin(\pi X_1X_2) + 20(x_3-\frac{1}{2})^2 + 10X_4 + 5X_4] \\
+    &= 10\int_{a_1}^{b_1}\int_{a_2}^{b_2}\sin(\pi x_1x_2)dx_2dx_1 + 20(x_3-\frac{1}{2})^2 + 10\mu_4 + 5\mu_5 \\
+    &= \frac{10}{\pi}[Si(\pi b_1a_2) - Si(\pi a_1a_2) - Si(\pi b_1b_2) + Si(\pi a_1b_2)] \\
+    &\quad + 20x_3^2 - 20x_3 + 5 + 10\mu_4 + 5\mu_5 \\
+    &= 20x_3^2 - 20x_3 + C \\
+\end{align*}
+
+\noindent Since Si is not defined at 0, we use a small $\epsilon$ for
+computational stability.\newline
+Analogously, we get for $x_4$, $x_5$:
+
+\begin{align*}
+    PDP_{f,4}(x_4) &= 10x_4 + C
+\end{align*}
+
+\begin{align*}
+    PDP_{f,5}(x_5) &= 5x_5 + C
+\end{align*}
+
+\begin{align*}
+    ALE_{f,1}(x_1) &= \int_{x_{1,\min}}^{x_1} \mathbb{E}_{X_{-1}|X_1}\Bigg[\frac{\partial}{\partial X_1}(10\sin(\pi X_1 X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
+                   &\quad \Bigg. + 5X_5)\bigg|X_1=z_1\Bigg]dz_1 - C\\
+                   &= \int_{x_{1,\min}}^{x_1} \mathbb{E}_{X_{-1}|X_1}\bigg[10\pi X_2\cos(\pi X_1 X_2)\bigg|X_1=z_1\bigg]dz_1 - C \\
+                   &\stackrel{\scriptsize\text{(ind.)}}{=} \int_{x_{1,\min}}^{x_1} 10\pi \mathbb{E}_{X_2}\left[X_2\cos(\pi z_1 X_2)\right]dz_1 - C \\
+                   &= \int_{x_{1,\min}}^{x_1} 10\pi \int_{a}^{b} x_2\cos(\pi z_1 x_2) \cdot p(x_2) dx_2 dz_1 - C \\
+                   &= \int_{x_{1,\min}}^{x_1} \frac{10\pi}{b-a} \int_{a}^{b} x_2\cos(\pi z_1 x_2)dx_2 dz_1 - C \\
+                   &= \int_{x_{1,\min}}^{x_1} \frac{10\pi}{b-a} \left[\frac{x_2\sin(\pi z_1 x_2)}{\pi z_1} + \frac{\cos(\pi z_1 x_2)}{(\pi z_1)^2}\right]_a^b dz_1 - C \\
+                   &= \frac{10}{b-a}\int_{x_{1,\min}}^{x_1} \frac{b\sin(\pi z_1 b) - a\sin(\pi z_1 a)}{z_1} \\ 
+                   &\quad + \frac{\cos(\pi z_1 b) - \cos(\pi z_1 a)}{\pi z_1^2} dz_1 - C \\
+                   &= \frac{10}{b-a}\bigg(b \cdot \int_{x_{1,\min}}^{x_1} \frac{\sin(\pi z_1 b)}{z_1}dz_1 - a \cdot \int_{x_{1,\min}}^{x_1} \frac{\sin(\pi z_1 a)}{z_1}dz_1 \\
+                   &\quad + \int_{x_{1,\min}}^{x_1} \frac{\cos(\pi z_1 b)}{\pi z_1^2}dz_1 - \int_{x_{1,\min}}^{x_1} \frac{\cos(\pi z_1 a)}{\pi z_1^2}dz_1\bigg) - C \\
+                   &= \frac{10}{b-a}\bigg[b \cdot (Si(\pi x_1 b)-Si(\pi x_{1,\min} b)) - a \cdot (Si(\pi x_1 a)- Si(\pi x_{1,\min} a)) \\
+                   &\quad + b \cdot \left(-\frac{\cos(\pi x_1 b)}{\pi x_1 b} - Si(\pi x_1 b) + \frac{\cos(\pi x_{1,\min} b)}{\pi x_{1,\min} b} + Si(\pi x_{1,\min} b)\right) \\
+                   &\quad - a \cdot \left(-\frac{\cos(\pi x_1 a)}{\pi x_1 a} - Si(\pi x_1 a) + \frac{\cos(\pi x_{1,\min} a)}{\pi x_{1,\min} a} + Si(\pi x_{1,\min} a)\right)\bigg] \\
+                   &\quad - C \\
+                   &= \frac{10}{b-a}\bigg[-\frac{1}{\pi x_1}\left(\cos(\pi x_1 b)-\cos(\pi x_1 a)\right) \\
+                   &\quad + \frac{1}{\pi x_{1,\min}}\left(\cos(\pi x_{1,\min} b)-\cos(\pi x_{1,\min} a)\right)\bigg] - C \\
+                   &= \frac{10}{b-a}\frac{1}{\pi x_1}\left(\cos(\pi x_1 a) - \cos(\pi x_1 b)\right) - C^\prime \\
+                   &= \frac{10}{\pi x_1}\left(1 - \cos(\pi x_1)\right) - C^\prime
+\end{align*}
+
+\newpage
+\noindent Analogously, we get for $x_2$:
+
+\begin{align*}
+    ALE_{f,2}(x_2) &= \frac{10}{\pi x_2}\left(1 - \cos(\pi x_2)\right) - C^\prime
+\end{align*}
+
+\begin{align*}
+    ALE_{f,3}(x_3) &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\Bigg[\frac{\partial}{\partial x_3}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
+    &\qquad\qquad\qquad\qquad\quad \Bigg. + 5X_5) \big|X_3=z_3\Bigg]dz_3 - C \\
+    &= \int_{x_{3,\min}}^{x_3} \mathbb{E}_{-X_3|X_3}\left[40z_3-20\right]dz_3 - C \\
+    &= \int_{x_{3,\min}}^{x_3} 40z_3-20dz_3 - C \\
+    &= \left[20z_3^2 - 20z_3\right]_{x_{3,\min}}^{x_3} - C \\
+    &= 20x_3^2 - 20x_3 - 20x_{3,\min}^2 + 20x_{3,\min} - C \\
+    &= 20x_3^2 - 20x_3 - C_3^\prime
+\end{align*}
+    
+\begin{align*}
+    ALE_{f,4}(x_4) &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-X_4|X_4}\Bigg[\frac{\partial}{\partial x_4}(10\sin(\pi X_1X_2) + 20(X_3-\frac{1}{2})^2 + 10X_4 \Bigg. \\
+    &\qquad\qquad\qquad\qquad\quad \Bigg. {} + 5X_5) \big|X_4=z_4\Bigg]dz_4 - C_4 \\
+    &= \int_{x_{4,\min}}^{x_4} \mathbb{E}_{-x_4|x_4}\left[10\right]dz_4 - C_4 \\
+    &= 10x_4 - 10x_{4,\min} - C_4 \\
+    &= 10x_4 - C_4^\prime
+\end{align*}
+
+\noindent Analogously, we get for $x_5$:
+    
+\begin{align*}
+    ALE_{f,5}(x_5) &= 5x_5 - C_5^\prime
+\end{align*}
+
+\newpage
 \subsection{FeynmanI.29.16 Dataset}
 
 For the FeynmanI.29.16 dataset, it is not possible to derive the ground truth
@@ -1457,10 +1462,9 @@ estimated ground truth feature effects for illustration purposes in
         \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/ale_groundtruth_comparison.png}
         \caption{ALE ground truth of FeynmanI.29.16}
     \end{subfigure}
-    \caption{Ground truth feature effects for FeynmanI.29.16 dataset. The green line
-    represents the analytically derived ground truth, the orange line the estimated feature
-    effect on the ground truth function using 10000 Monte Carlo samples. Note that both
-    are centered that the average effect at the quantile-based grid points is 0.
+    \caption{Ground truth feature effects for FeynmanI.29.16 dataset. The estimated feature
+    effect on the ground truth function using 10000 Monte Carlo samples is displayed in orange,
+    analytical feature effects are infeasible. The effects are centered to mean 0 over the quantile-based grid-points.
     Since $d_1$ and $d_2$, are dummy variables, they have a constant effect of 0 and are
     thus omitted.}
     \label{fig:feynman-groundtruth}  % chktex 24
@@ -1468,6 +1472,12 @@ estimated ground truth feature effects for illustration purposes in
 
 \clearpage
 \section{Additional Main Experiment Results}\label{app:additional-results}
+
+In the following, we provide the complete results of the main experiment,
+including all datasets, models, and features. Note that the linear regression
+only serves as a performance baseline and the SVM\_OF is severly overfitted and
+not producing meaningful results. Therefore, we recommend to focus on the
+other results.
 
 \subsection{SimpleNormalCorrelated Dataset}
 
@@ -1816,11 +1826,15 @@ estimated ground truth feature effects for illustration purposes in
 \clearpage
 \section{Further Investigation of Main Experiment Results}\label{app:main-study-further-investigation}
 
+In this section, we provide a deeper investigation of selected interesting results from the main experiment.
+For this analysis, we plot the bias and variance per grid point over the feature range to gain
+further insights.
+
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{img/further_investigation/snc_pdp_XGBoost_OF_1000.png}
     \caption{$\text{Bias}^2$ and variance per grid point for PDP of XGBoost\_OF on SimpleNormalCorrelated dataset with $n_{train} = 1000$.
-        This example demonstrates the cross-validation reduces the variance mainly in regions where data is scarce, i.e.,
+        This example demonstrates that cross-validation reduces the variance mainly in regions where data is scarce, i.e.,
         at the edges of the feature space. In this regions, the model has only few data points to learn from, and approximations
         of the feature effect may be less reliable.}
     \label{fig:further-pdp-xgb-snc}  % chktex 24
@@ -1850,6 +1864,9 @@ estimated ground truth feature effects for illustration purposes in
 
 \clearpage
 \section{Additional Results for Ablation Study: Variance Decomposition}\label{app:additional-variance-decomposition}
+
+In the following, we provide the complete results of the ablation study on variance decomposition,
+including all datasets, features, and considered models.
 
 \subsection{SimpleNormalCorrelated Dataset}
 \begin{figure}[htbp]
@@ -1883,7 +1900,7 @@ estimated ground truth feature effects for illustration purposes in
         \includegraphics[width=\textwidth]{img/SNC-all/variance_decomposition_ale_XGBoost_OT.png}
         \caption{XGBoost\_OT ALE on SimpleNormalCorrelated}
     \end{subfigure}
-    \caption{Variance decomposition results for PDP on SimpleNormalCorrelated dataset. Variance is taken from the
+    \caption{Variance decomposition results for ALE on SimpleNormalCorrelated dataset. Variance is taken from the
         main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
         obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
         on 8000 training samples were not obtained due to excessive computation time. Negative variances are
@@ -1925,7 +1942,7 @@ estimated ground truth feature effects for illustration purposes in
         \includegraphics[width=\textwidth]{img/Friedman1-all/variance_decomposition_ale_XGBoost_OT.png}
         \caption{XGBoost\_OT ALE on Friedman1}
     \end{subfigure}
-    \caption{Variance decomposition results for PDP on Friedman1 dataset. Variance is taken from the
+    \caption{Variance decomposition results for ALE on Friedman1 dataset. Variance is taken from the
         main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
         obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
         on 8000 training samples were not obtained due to excessive computation time. Negative variances are
@@ -1936,7 +1953,7 @@ estimated ground truth feature effects for illustration purposes in
 \clearpage
 \subsection{Feynman I.29.16 Dataset}
 
-\begin{figure}[htbp]
+\begin{figure}[ht!]
     \centering
     \begin{subfigure}[b]{0.9\textwidth}
         \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_pdp_XGBoost_OF.png}
@@ -1948,14 +1965,14 @@ estimated ground truth feature effects for illustration purposes in
         \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_pdp_XGBoost_OT.png}
         \caption{XGBoost\_OT PDP on FeynmanI.29.16}
     \end{subfigure}
-    \caption{Variance decomposition results for PDP on FeynmanI.29.16 dataset. Variance is taken from the
+    \caption{Variance decomposition results for PDP on FeynmanI.29.16. Variance is taken from the
         main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
         obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
         on 8000 training samples were not obtained due to excessive computation time.}
     \label{fig:pdp-variance-decomp-feynman}  % chktex 24
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[ht!]
     \centering
     \begin{subfigure}[b]{0.9\textwidth}
         \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_ale_XGBoost_OF.png}
@@ -1967,7 +1984,7 @@ estimated ground truth feature effects for illustration purposes in
         \includegraphics[width=\textwidth]{img/FeynmanI.29.16-all/variance_decomposition_ale_XGBoost_OT.png}
         \caption{XGBoost\_OT ALE on FeynmanI.29.16}
     \end{subfigure}
-    \caption{Variance decomposition results for PDP on FeynmanI.29.16 dataset. Variance is taken from the
+    \caption{Variance decomposition results for ALE on FeynmanI.29.16. Variance is taken from the
         main experiment, Monte Carlo variance is estimated in the ablation study. The model variance is
         obtained by subtracting the Monte Carlo variance from the total variance. Results for XGBoost\_OT
         on 8000 training samples were not obtained due to excessive computation time. Negative variances are
@@ -1977,6 +1994,10 @@ estimated ground truth feature effects for illustration purposes in
 
 \clearpage
 \section{Additional Results for Ablation Study: Datasize Impact on Monte Carlo Variance}\label{app:additional-mc-results}
+
+In this section, we provide additional results for the ablation study on the impact of dataset size
+on the Monte Carlo variance. This includes the complete aggregate results for both SimpleNormalCorrelated and
+Friedman1 for all features, as well as a more detailed view on the Monet Carlo variances per grid point.
 
 \subsection{Aggregated Results}
 
