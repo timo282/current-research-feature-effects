@@ -1,4 +1,4 @@
-# Current Research: Should We Compute Feature Effects on Training or Validation Data?
+# Current Research Project: Understanding Implications of Dataset Choice for Feature Effect Estimation - A Simulation-Based Investigation through Error Decomposition
 
 Interpretable Machine Learning Research Project at LMU Munich.
 
