@@ -1,0 +1,99 @@
+SimpleNormalCorrelated:
+  groundtruth: SimpleCombinedGroundtruth
+  features:
+    x_1:
+      marginal:
+        type: normal
+        params: [0, 1]
+    x_2:
+      marginal:
+        type: normal
+        params: [0, 1]
+    x_3:
+      marginal:
+        type: normal
+        params: [0, 1]
+    x_4:
+      marginal:
+        type: normal
+        params: [0, 1]
+  correlation_matrix:
+    - [1, 0.9, 0, 0]
+    - [0.9, 1, 0, 0]
+    - [0, 0, 1, 0]
+    - [0, 0, 0, 1]
+
+Friedman1:
+  groundtruth: Friedman1Groundtruth
+  features:
+    x_1:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_2:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_3:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_4:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_5:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_6:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    x_7:
+      marginal:
+        type: uniform
+        params: [0, 1]
+  correlation_matrix:
+    - [1, 0, 0, 0, 0, 0, 0]
+    - [0, 1, 0, 0, 0, 0, 0]
+    - [0, 0, 1, 0, 0, 0, 0]
+    - [0, 0, 0, 1, 0, 0, 0]
+    - [0, 0, 0, 0, 1, 0, 0]
+    - [0, 0, 0, 0, 0, 1, 0]
+    - [0, 0, 0, 0, 0, 0, 1]
+
+FeynmanI.29.16:
+  groundtruth: WaveInterferenceGroundtruth
+  features:
+    x_1:
+      marginal:
+        type: loguniform
+        params: [0.1, 10]
+    x_2:
+      marginal:
+        type: loguniform
+        params: [0.1, 10]
+    theta_1:
+      marginal:
+        type: uniform
+        params: [0, 6.2831853]
+    theta_2:
+      marginal:
+        type: uniform
+        params: [0, 6.2831853]
+    d_1:
+      marginal:
+        type: uniform
+        params: [0, 1]
+    d_2:
+      marginal:
+        type: uniform
+        params: [0, 1]
+  correlation_matrix:
+    - [1, 0, 0, 0, 0, 0]
+    - [0, 1, 0, 0, 0, 0]
+    - [0, 0, 1, 0, 0, 0]
+    - [0, 0, 0, 1, 0, 0]
+    - [0, 0, 0, 0, 1, 0]
+    - [0, 0, 0, 0, 0, 1]

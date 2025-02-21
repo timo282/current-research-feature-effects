@@ -1,0 +1,169 @@
+LinReg:
+  model: LinearRegression
+  model_params:
+    SimpleNormalCorrelated:
+      1000: {}
+      8000: {}
+    Friedman1:
+      1000: {}
+      8000: {}
+    FeynmanI.29.16:
+      1000: {}
+      8000: {}
+
+XGBoost_OF:
+  model: XGBoost
+  model_params:
+    SimpleNormalCorrelated:
+      1000:     
+        n_estimators: 1200
+        max_depth: 16
+        learning_rate: 0.35
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1500
+        max_depth: 18
+        learning_rate: 0.4
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+    Friedman1:
+      1000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1200
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+    FeynmanI.29.16:
+      1000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+
+XGBoost_OT:
+  model: XGBoost
+  model_params:
+    SimpleNormalCorrelated:
+      1000: to_tune
+      8000: to_tune
+    Friedman1:
+      1000: to_tune
+      8000: to_tune
+    FeynmanI.29.16:
+      1000: to_tune
+      8000: to_tune
+
+GAM_OF:
+  model: GAM
+  model_params:
+    SimpleNormalCorrelated:
+      1000:
+        n_bases: 50
+        lam: 0.0005
+      8000:
+        n_bases: 64
+        lam: 0.00001
+    Friedman1:
+      1000:
+        n_bases: 50
+        lam: 0.0001
+      8000:
+        n_bases: 80
+        lam: 0.00000001
+    FeynmanI.29.16:
+      1000:
+        n_bases: 50
+        lam: 0.0001
+      8000:
+        n_bases: 64
+        lam: 0.0000005
+
+GAM_OT:
+  model: GAM
+  model_params:
+    SimpleNormalCorrelated:
+      1000: to_tune
+      8000: to_tune
+    Friedman1:
+      1000: to_tune
+      8000: to_tune
+    FeynmanI.29.16:
+      1000: to_tune
+      8000: to_tune
+
+SVM_OF:
+  model: SVM-RBF
+  model_params:
+    SimpleNormalCorrelated:
+      1000:
+        C: 800
+        gamma: 10
+      8000:
+        C: 1000
+        gamma: 10
+    Friedman1:
+      1000:
+        C: 1000
+        gamma: 15
+      8000:
+        C: 1000
+        gamma: 18
+    FeynmanI.29.16:
+      1000:
+        C: 200
+        gamma: 8
+      8000:
+        C: 400
+        gamma: 10
+
+
+SVM_OT:
+  model: SVM-RBF
+  model_params:
+    SimpleNormalCorrelated:
+      1000: to_tune
+      8000: to_tune
+    Friedman1:
+      1000: to_tune
+      8000: to_tune
+    FeynmanI.29.16:
+      1000: to_tune
+      8000: to_tune

@@ -1,0 +1,79 @@
+XGBoost_OF:
+  model: XGBoost
+  model_params:
+    SimpleNormalCorrelated:
+      1000:     
+        n_estimators: 1200
+        max_depth: 16
+        learning_rate: 0.35
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1500
+        max_depth: 18
+        learning_rate: 0.4
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+    Friedman1:
+      1000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1200
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+    FeynmanI.29.16:
+      1000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+      8000:
+        n_estimators: 1000
+        max_depth: 14
+        learning_rate: 0.3
+        subsample: 1.0
+        min_child_weight: 1
+        colsample_bytree: 1.0
+        colsample_bylevel: 1.0
+        lambda: 0
+        alpha: 0
+
+XGBoost_OT:
+  model: XGBoost
+  model_params:
+    SimpleNormalCorrelated:
+      1000: to_tune
+      8000: to_tune
+    Friedman1:
+      1000: to_tune
+      8000: to_tune
+    FeynmanI.29.16:
+      1000: to_tune
+      8000: to_tune

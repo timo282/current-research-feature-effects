@@ -1,8 +1,15 @@
+"""
+This module contains utility functions for plotting.
+"""
+
+from typing import Literal
 import matplotlib.pyplot as plt
-import pandas as pd
 
 
 def set_style():
+    """
+    Set the style of the plots.
+    """
     plt.style.use("fivethirtyeight")
 
     plt.rcParams.update(
@@ -15,13 +22,23 @@ def set_style():
             "font.size": 10,  # This sets the overall default font size
             "grid.linewidth": 0.5,  # Thin grid lines
             "figure.facecolor": "white",  # White background color
+            "figure.dpi": 300,  # Higher resolution
             "axes.facecolor": "white",  # White background color
             "axes.edgecolor": "white",  # White background edge color
+            "lines.linewidth": 1.5,  # Thin edge linewidth
         }
     )
 
 
 def get_boxplot_style():
+    """
+    Set the style of the boxplot.
+
+    Returns
+    -------
+    Dict
+        Dictionary containing the style of the boxplot.
+    """
     style = dict(
         boxprops=dict(edgecolor="black"),  # Box properties
         whiskerprops=dict(color="black"),  # Whisker properties
@@ -35,60 +52,61 @@ def get_boxplot_style():
 
 
 def get_feature_effect_plot_style():
+    """
+    Set the style of the feature effect plot.
+
+    Returns
+    -------
+    Dict
+        Dictionary containing the style of the feature effect plot.
+    """
     style = dict(linewidth=2, marker="+", markeredgewidth=1, markersize=5)
 
     return style
 
 
-def create_joined_melted_df(
-    df_model_res: pd.DataFrame,
-    df_pdp_res: pd.DataFrame,
-    noise_name: str = "snr_x",
-    value_vars: list[str] = ["x_1", "x_2", "x_3", "x_4", "x_5"],
-) -> pd.DataFrame:
+def set_fontsize(size: Literal["standard", "large", "xlarge"]):
     """
-    Merge two DataFrames on 'model_id' and reshape the resulting DataFrame to a long format.
-
-    This function performs an inner join on two DataFrames based on the 'model_id' column.
-    After merging, it reshapes the DataFrame to long format, transforming feature columns
-    ('x_1' to 'x_5') into a single 'feature' column and their values into an 'effect_error'
-    column.
+    Set the font size of the plots.
 
     Parameters
     ----------
-    df_model_res : pd.DataFrame
-        DataFrame containing model results, which must include the 'model_id' column
-        along with other model performance metrics such as mse_test, r2_train, etc.
-    df_pdp_res : pd.DataFrame
-        DataFrame containing PDP results, also must include the 'model_id' column and
-        the values for each feature ('x_1' to 'x_5').
-    noise_name : str, optional
-        Name of the noise column in the merged DataFrame, by default "snr_x"
-    value_vars : list[str], optional
-        List of feature column names to be reshaped, by default ["x_1", "x_2", "x_3", "x_4", "x_5"]
-
-    Returns
-    -------
-    pd.DataFrame
-        A melted DataFrame containing columns from both input DataFrames along with
-        'feature' and 'effect_error'.
+    size : {'standard', 'large', 'xlarge'}
+        The font size to set.
     """
-    df_merged = df_model_res.merge(df_pdp_res, on="model_id", how="inner")
-    id_vars = [
-        "model_id",
-        "model_x",
-        "simulation_x",
-        "n_train_x",
-        noise_name,
-        "mse_train",
-        "mse_test",
-        "mae_train",
-        "mae_test",
-        "r2_train",
-        "r2_test",
-    ]
-    df_melted = pd.melt(
-        df_merged, id_vars=id_vars, value_vars=value_vars, var_name="feature", value_name="effect_error"
-    )
-
-    return df_melted
+    if size == "xlarge":
+        plt.rcParams.update(
+            {
+                "font.size": 16,
+                "axes.labelsize": 18,
+                "axes.titlesize": 20,
+                "figure.titlesize": 22,
+                "xtick.labelsize": 16,
+                "ytick.labelsize": 16,
+                "legend.fontsize": 16,
+            }
+        )
+    elif size == "large":
+        plt.rcParams.update(
+            {
+                "font.size": 14,
+                "axes.labelsize": 16,
+                "axes.titlesize": 18,
+                "figure.titlesize": 20,
+                "xtick.labelsize": 14,
+                "ytick.labelsize": 14,
+                "legend.fontsize": 14,
+            }
+        )
+    else:
+        plt.rcParams.update(
+            {
+                "font.size": 11,
+                "axes.labelsize": 12,
+                "axes.titlesize": 12,
+                "figure.titlesize": 16,
+                "xtick.labelsize": 10,
+                "ytick.labelsize": 10,
+                "legend.fontsize": 12,
+            }
+        )

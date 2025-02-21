@@ -1,11 +1,16 @@
+"""
+This module contains several mappings: dataset name to groundtruth, model name to estimator, and suggested
+hyperparameters for each model, as well as a wrapper for a Generalized Additive Model (GAM) compatible with
+the sklearn API.
+"""
+
 from typing_extensions import List, Tuple, Literal
+from itertools import combinations
 import numpy as np
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.svm import SVR
-from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import LinearRegression
 from sklearn.base import BaseEstimator, RegressorMixin
-from pygam import LinearGAM, s, l, te
+from pygam import LinearGAM, s, te
 from xgboost import XGBRegressor
 import optuna
 
@@ -16,75 +21,65 @@ from current_research_feature_effects.data_generating.simple import (
     SimpleCombinedGroundtruth,
 )
 from current_research_feature_effects.data_generating.friedman1 import Friedman1Groundtruth
+from current_research_feature_effects.data_generating.physics_data import (
+    NewtonUniversalGravitationGroundtruth,
+    WaveInterferenceGroundtruth,
+)
 
 
 def map_dataset_to_groundtruth(
-    dataset: str, marginals: List[Tuple[Literal["normal", "uniform"], Tuple]], corr_matrix: np.array, name: str = None
+    dataset: str,
+    marginals: List[Tuple[Literal["normal", "uniform", "loguniform"], Tuple]],
+    corr_matrix: np.array,
+    feature_names: List[str] = None,
+    name: str = None,
 ) -> Groundtruth:
     if dataset == "SimpleAdditiveGroundtruth":
-        return SimpleAdditiveGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleAdditiveGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "SimpleInteractionGroundtruth":
-        return SimpleInteractionGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleInteractionGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "SimpleCombinedGroundtruth":
-        return SimpleCombinedGroundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return SimpleCombinedGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
     if dataset == "Friedman1Groundtruth":
-        return Friedman1Groundtruth(marginal_distributions=marginals, correlation_matrix=corr_matrix, name=name)
+        return Friedman1Groundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
+    if dataset == "NewtonUniversalGravitationGroundtruth":
+        return NewtonUniversalGravitationGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
+    if dataset == "WaveInterferenceGroundtruth":
+        return WaveInterferenceGroundtruth(
+            marginal_distributions=marginals, correlation_matrix=corr_matrix, feature_names=feature_names, name=name
+        )
 
 
 def map_modelname_to_estimator(model_name: str) -> BaseEstimator:
-    if model_name == "RandomForest":
-        return RandomForestRegressor(random_state=42)
-    if model_name == "XGBoost-full":
+    if model_name == "XGBoost":
         return XGBRegressor(random_state=42)
-    if model_name == "XGBoost-f1-cor" or model_name == "XGBoost-2comb-cor":
-        return XGBRegressor(random_state=42, interaction_constraints="[[0, 1]]")
-    if model_name == "XGBoost-2add-cor":
-        return XGBRegressor(random_state=42, interaction_constraints="[]")
-    if model_name == "DecisionTree":
-        return DecisionTreeRegressor(random_state=42)
     if model_name == "SVM-RBF":
         return SVR(kernel="rbf")
-    if model_name == "ElasticNet":
-        return ElasticNet(random_state=42, max_iter=10000)
-    if model_name == "GAM-f1-cor":
-        return GAM(te_features=[(0, 1)], s_features=[2], l_features=[3, 4])
-    if model_name == "GAM-2add-cor":
-        return GAM(s_features=[0, 1])
-    if model_name == "GAM-2comb-cor":
-        return GAM(te_features=[(0, 1)], s_features=[0, 1])
-    if model_name == "GAM-4-full":
-        return GAM(te_features=[(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)], s_features=[0, 1, 2, 3])
-    raise NotImplementedError("Base estimator not implemented yet")
+    if model_name == "LinearRegression":
+        return LinearRegression()
+    if model_name == "GAM":
+        return GAM(interaction_order=2)
+    raise NotImplementedError(f"Base estimator {model_name} not implemented.")
 
 
 def suggested_hps_for_model(model: BaseEstimator, trial: optuna.trial.Trial) -> dict:
-    if isinstance(model, RandomForestRegressor):
-        return _suggest_hps_rf(trial)
     if isinstance(model, XGBRegressor):
         return _suggest_hps_xgboost(trial)
-    if isinstance(model, DecisionTreeRegressor):
-        return _suggest_hps_tree(trial)
     if isinstance(model, SVR):
         return _suggest_hps_svm(trial)
-    if isinstance(model, ElasticNet):
-        return _suggest_hps_elasticnet(trial)
     if isinstance(model, GAM):
         return _suggest_hps_gam(trial)
-    raise NotImplementedError("Base estimator not implemented yet")
-
-
-def _suggest_hps_rf(trial: optuna.trial.Trial):
-    # using the values from https://www.jmlr.org/papers/v20/18-444.html
-    hyperparams = {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 1750),
-        "max_depth": trial.suggest_int("max_depth", 2, 30),
-        "min_samples_split": trial.suggest_float("min_samples_split", 0.01, 0.5),
-        "max_samples": trial.suggest_float("max_samples", 0.3, 0.975),
-        # use 1 as max because of the small number of features in the dataset:
-        "max_features": trial.suggest_float("max_features", 0.035, 1),
-    }
-
-    return hyperparams
+    raise NotImplementedError(f"HPO for model {model} not implemented.")
 
 
 def _suggest_hps_xgboost(trial: optuna.trial.Trial):
@@ -104,18 +99,6 @@ def _suggest_hps_xgboost(trial: optuna.trial.Trial):
     return hyperparams
 
 
-def _suggest_hps_tree(trial: optuna.trial.Trial):
-    # using the values from https://www.jmlr.org/papers/v20/18-444.html
-    hyperparams = {
-        "max_depth": trial.suggest_int("max_depth", 12, 27),
-        "min_samples_split": trial.suggest_int("min_samples_split", 5, 50),
-        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 4, 42),
-        "ccp_alpha": trial.suggest_float("ccp_alpha", 0, 0.008),
-    }
-
-    return hyperparams
-
-
 def _suggest_hps_svm(trial: optuna.trial.Trial):
     # using the values from https://www.jmlr.org/papers/v20/18-444.html
     hyperparams = {
@@ -126,19 +109,9 @@ def _suggest_hps_svm(trial: optuna.trial.Trial):
     return hyperparams
 
 
-def _suggest_hps_elasticnet(trial: optuna.trial.Trial):
-    # using the values from https://www.jmlr.org/papers/v20/18-444.html
-    hyperparams = {
-        "alpha": trial.suggest_float("alpha", 0.001, 0.147, log=True),  # lambd
-        "l1_ratio": trial.suggest_float("l1_ratio", 0.009, 0.981),  # alpha
-    }
-
-    return hyperparams
-
-
 def _suggest_hps_gam(trial: optuna.trial.Trial):
     hyperparams = {
-        "n_splines": trial.suggest_int("n_splines", 5, 50),
+        "n_bases": trial.suggest_int("n_bases", 5, 50),
         "lam": trial.suggest_float("lam", 1e-3, 1e3, log=True),
     }
 
@@ -147,57 +120,124 @@ def _suggest_hps_gam(trial: optuna.trial.Trial):
 
 class GAM(BaseEstimator, RegressorMixin):
     """
-    GAM compatible with sklearn API.
+     GAM compatible with sklearn API that automatically creates spline terms
+     and their interactions up to a specified order.
 
-    Example:
-    ```
-    gam = GAM(terms={"s": [0, 1], "l": [2, 3], "te": [(4, 5)]})
-    gam.fit(X_train, y_train)
-    gam.predict(X_test)
-    ```
+     Parameters
+     ----------
+     interaction_order : int, default=1
+         Maximum order of feature interactions to include.
+         1 means no interactions (only main effects)
+         2 means pairwise interactions
+         3 means up to three-way interactions, etc.
+    n_bases : int, default=25
+        Total number of basis functions to target for each term.
+        For k-way interactions, uses n_bases^(1/k) splines per feature.
+    lam : float, default=0.6
+        Smoothing parameter.
+    max_iter : int, default=250
+        Maximum number of iterations for the solver.
+
+     Example
+     -------
+     ```
+     # Create GAM with all pairwise interactions
+     gam = GAM(interaction_order=2)
+     gam.fit(X_train, y_train)
+     gam.predict(X_test)
+     ```
     """
 
     def __init__(
         self,
-        s_features: List[int] | None = None,
-        l_features: List[int] | None = None,
-        te_features: List[Tuple[int]] | None = None,
-        n_splines: int = 25,
+        interaction_order: int = 1,
+        n_bases: int = 25,
         lam: float = 0.6,
+        max_iter: int = 1000,
     ):
-        self.n_splines = n_splines
+        if interaction_order < 1:
+            raise ValueError("interaction_order must be >= 1")
+        if n_bases < 4:
+            raise ValueError("n_bases must be >= 4")
+
+        self.interaction_order = interaction_order
+        self.n_bases = n_bases
         self.lam = lam
-        self.s_features = s_features
-        self.l_features = l_features
-        self.te_features = te_features
-        self.terms = self._parse_terms(self.s_features, self.l_features, self.te_features)
-        self.model = LinearGAM(self.terms)
+        self.max_iter = max_iter
         self._is_fitted__ = False
 
-    def __sklearn_is_fitted__(self):
-        return self._is_fitted__
+    def _get_n_splines(self, order: int) -> int:
+        """
+        Calculate number of splines per feature for a given interaction order.
 
-    def _parse_terms(self, s_features, l_features, te_features):
+        Uses the order-th root of n_bases to maintain consistent total basis
+        functions across different interaction orders.
+        """
+        return max(4, round(self.n_bases ** (1 / order)))
+
+    def _generate_terms(self, n_features: int):
+        """Generate spline terms for all features and their interactions."""
+        features = list(range(n_features))
         gam_term = None
-        if s_features is not None:
-            for feature in s_features:
-                term = s(feature, n_splines=self.n_splines, lam=self.lam)
-                gam_term = term if gam_term is None else gam_term + term
-        if l_features is not None:
-            for feature in l_features:
-                term = l(feature)
-                gam_term = term if gam_term is None else gam_term + term
-        if te_features is not None:
-            for features in te_features:
-                term = te(*features, lam=self.lam)
-                gam_term = term if gam_term is None else gam_term + term
+
+        # Add main effects (spline terms for each feature)
+        n_splines_main = self._get_n_splines(1)
+        for feature in features:
+            term = s(feature, n_splines=n_splines_main, lam=self.lam)
+            gam_term = term if gam_term is None else gam_term + term
+
+        # Add interaction terms if interaction_order > 1
+        if self.interaction_order > 1:
+            for order in range(2, min(self.interaction_order + 1, n_features + 1)):
+                n_splines_interaction = self._get_n_splines(order)
+                for features_subset in combinations(features, order):
+                    term = te(*features_subset, n_splines=n_splines_interaction, lam=self.lam)
+                    gam_term = term if gam_term is None else gam_term + term
 
         return gam_term
 
     def fit(self, X, y):
+        """
+        Fit the GAM model.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Training data
+        y : array-like of shape (n_samples,)
+            Target values
+
+        Returns
+        -------
+        self : object
+            Returns the instance itself.
+        """
+        n_features = X.shape[1]
+        terms = self._generate_terms(n_features)
+        self.model = LinearGAM(terms, max_iter=self.max_iter)
         self.model.fit(X, y)
         self._is_fitted__ = True
+
         return self
 
     def predict(self, X):
+        """
+        Make predictions using the fitted GAM model.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
+
+        Returns
+        -------
+        y : array-like of shape (n_samples,)
+            The predicted values.
+        """
+        if not self._is_fitted__:
+            raise ValueError("Model must be fitted before making predictions.")
         return self.model.predict(X)
+
+    def __sklearn_is_fitted__(self):
+        """Required for sklearn compatibility."""
+        return self._is_fitted__

@@ -1,15 +1,44 @@
+"""
+This module contains utility functions for the simulation study.
+"""
+
 from configparser import ConfigParser
-from typing import Dict
+import logging
+import warnings
+from typing import Dict, List, Literal
 from pathlib import Path
+from dataclasses import dataclass
+from itertools import product
+from joblib import dump
 import os
 import shutil
-import ast
+import yaml
+import multiprocessing
+from logging.handlers import QueueHandler, QueueListener
+import sys
+from time import sleep
 import numpy as np
+import pandas as pd
+from sqlalchemy import Engine
 
-from current_research_feature_effects.mappings import map_modelname_to_estimator, map_dataset_to_groundtruth
+from current_research_feature_effects.mappings import map_dataset_to_groundtruth, map_modelname_to_estimator
+from current_research_feature_effects.data_generating.data_generation import Groundtruth
 
 
-def parse_sim_params(sim_config: ConfigParser) -> Dict:
+@dataclass
+class SimulationParameter:
+    """Parameter combination for simulation"""
+
+    groundtruth: Groundtruth
+    model_name: str
+    model_config: Dict
+    n_train: int
+    n_val: int
+    snr: float
+    config: ConfigParser
+
+
+def _parse_sim_params(sim_config: ConfigParser) -> Dict:
     """Parse simulation parameters from configuration file.
 
     Parameters
@@ -23,70 +52,275 @@ def parse_sim_params(sim_config: ConfigParser) -> Dict:
         Dictionary of simulation parameters.
     """
     param_dict = {}
-    model_names = ast.literal_eval(sim_config["simulation_params"]["models"])
-    datasets = sim_config.get("simulation_params", "datasets").split(",")
-    dataset_names = sim_config.get("simulation_params", "dataset_names").split(",")
-    marginals = ast.literal_eval(sim_config["simulation_params"]["marginals"])
-    corr_matrices = [
-        np.array(element) for element in ast.literal_eval(sim_config["simulation_params"]["correlation_matrices"])
-    ]
+    models_config_path = Path(sim_config["simulation_params"]["models_yaml"])
+    datasets_config_path = Path(sim_config["simulation_params"]["datasets_yaml"])
+
     param_dict["n_sim"] = sim_config.getint("simulation_params", "n_sim")
-    param_dict["n_train"] = [int(x) for x in sim_config.get("simulation_params", "n_train").split(",")]
-    param_dict["snr"] = [float(x) for x in sim_config.get("simulation_params", "snr").split(",")]
-    param_dict["models_config"] = {
-        k: [(model_name, map_modelname_to_estimator(model_name)) for model_name in v] for k, v in model_names.items()
-    }
+    param_dict["n_train_val"] = [
+        (int(n_train), int(n_val))
+        for n_train, n_val in zip(
+            sim_config.get("simulation_params", "n_train").split(","),
+            sim_config.get("simulation_params", "n_val").split(","),
+        )
+    ]
+    param_dict["snr"] = sim_config.getfloat("simulation_params", "snr")
+
+    with open(models_config_path, "r") as file:
+        models_config: Dict = yaml.safe_load(file)
+
+    for model in models_config.keys():
+        models_config[model]["model"] = map_modelname_to_estimator(models_config[model]["model"])
+    param_dict["models_config"] = models_config
+
+    with open(datasets_config_path, "r") as file:
+        datasets_config: Dict = yaml.safe_load(file)
+
     param_dict["groundtruths"] = [
-        map_dataset_to_groundtruth(d, m, c, name=n)
-        for n, d, m, c in zip(dataset_names, datasets, marginals, corr_matrices)
+        map_dataset_to_groundtruth(
+            config["groundtruth"],
+            [(v["marginal"]["type"], tuple(v["marginal"]["params"])) for v in config["features"].values()],
+            np.array(config["correlation_matrix"], dtype=float),
+            feature_names=list(config["features"].keys()),
+            name=name,
+        )
+        for name, config in datasets_config.items()
     ]
 
     return param_dict
 
 
-def parse_storage_and_sim_metadata(config: ConfigParser) -> Dict:
-    """Parse storage and simulation metadata from configuration file.
+def create_parameter_space(config: ConfigParser) -> List[SimulationParameter]:
+    """
+    Create parameter space for simulation.
 
     Parameters
     ----------
-    sim_config : ConfigParser
-        Config containing storage and simulation metadata.
+    config : ConfigParser
+        Configuration file containing simulation parameters.
 
     Returns
     -------
-    Dict
-        Dictionary of storage and simulation metadata.
+    List[SimulationParameter]
+        List of simulation parameter
     """
-    metadata_dict = {}
-    metadata_dict["model_folder"] = config.get("storage", "models")
-    metadata_dict["model_results_storage"] = config.get("storage", "model_results")
-    metadata_dict["effects_results_storage"] = config.get("storage", "effects_results")
+    sim_params = _parse_sim_params(config)
 
-    metadata_dict["n_trials"] = config.getint("simulation_metadata", "n_tuning_trials")
-    metadata_dict["cv"] = config.getint("simulation_metadata", "n_tuning_folds")
-    metadata_dict["metric"] = config.get("simulation_metadata", "tuning_metric")
-    metadata_dict["direction"] = config.get("simulation_metadata", "tuning_direction")
-    metadata_dict["tuning_studies_folder"] = config.get("storage", "tuning_studies_folder")
-    metadata_dict["n_test"] = config.getint("simulation_metadata", "n_test")
+    return [
+        SimulationParameter(
+            groundtruth=gt,
+            model_name=model_name,
+            model_config=model_config,
+            n_train=n_train,
+            n_val=n_val,
+            snr=sim_params["snr"],
+            config=config,
+        )
+        for gt, (n_train, n_val), (model_name, model_config) in product(
+            sim_params["groundtruths"], sim_params["n_train_val"], sim_params["models_config"].items()
+        )
+    ]
 
-    return metadata_dict
 
-
-def create_and_set_sim_dir(sim_config: ConfigParser) -> None:
+def create_and_set_sim_dir(sim_config: ConfigParser, config_path: Path) -> None:
     """Create and set simulation directory.
 
     Parameters
     ----------
     sim_config : ConfigParser
         Config containing simulation name and base directory.
+    config_path : Path
+        Path to the configuration file.
     """
     simulation_name = sim_config.get("storage", "simulation_name")
 
     base_dir = Path(sim_config.get("storage", "simulations_dir")) / simulation_name
     if not os.path.exists(base_dir):
         os.mkdir(base_dir)
-        shutil.copy2("config.ini", base_dir / f"config_{simulation_name}.ini")
-        shutil.copy2("pyproject.toml", base_dir / f"dependencies_{simulation_name}.ini")
+        shutil.copy2(config_path, base_dir / config_path.name)
         os.chdir(base_dir)
+        logging.info(f"Simulation directory {base_dir} created.")
     else:
         raise ValueError(f"Simulation {base_dir} already exists.")
+
+
+def save_model_results(
+    model_metrics: Dict[str, float],
+    conn: Engine,
+    params: SimulationParameter,
+    sim_no: int,
+    max_retries: int = 10,
+    retry_delay: float = 0.1,
+) -> bool:
+    """
+    Save model results to database.
+
+    Parameters
+    ----------
+    model_metrics : Dict[str, float]
+        Dictionary of model metrics.
+    conn : Engine
+        SQLAlchemy engine for results database.
+    params : SimulationParameter
+        Simulation parameters.
+    sim_no : int
+        Simulation number.
+    max_retries : int, optional
+        Maximum number of retries, by default 10
+    retry_delay : float, optional
+        Delay between retries, by default 0.1
+
+    Returns
+    -------
+    bool
+        True if results were saved successfully.
+    """
+    df_model_result = pd.DataFrame(
+        {
+            "model": [params.model_name],
+            "simulation": [sim_no + 1],
+            "n_train": [params.n_train],
+            "snr": [params.snr],
+        }
+        | model_metrics
+    )
+
+    for attempt in range(max_retries):
+        try:
+            df_model_result.to_sql(
+                "model_results",
+                con=conn,
+                if_exists="append",
+            )
+            return True
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise Exception(f"Failed to save results after {max_retries} attempts: {e}")
+            sleep(retry_delay * (2**attempt))  # Exponential backoff
+
+
+def save_fe_aggregated_results(
+    res_agg: Dict[str, Dict[str, Dict]],
+    conn: Engine,
+    params: SimulationParameter,
+    type: Literal["pdp", "ale"],
+):
+    """
+    Save aggregated feature effect results to database.
+
+    Parameters
+    ----------
+    res_agg : Dict[str, Dict[str, Dict]]
+        Aggregated feature effect results.
+    conn : Engine
+        SQLAlchemy engine for results database.
+    params : SimulationParameter
+        Simulation parameters.
+    type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
+        Type of feature effect.
+    """
+    rows = []
+    for split, split_results in res_agg.items():
+        for metric, feature_values in split_results.items():
+            for feature, value in feature_values.items():
+                rows.append(
+                    {
+                        "model": params.model_name,
+                        "n_train": params.n_train,
+                        "split": split,
+                        "metric": metric,
+                        "feature": feature,
+                        "value": value,
+                    }
+                )
+
+    df_result = pd.DataFrame(rows)
+
+    df_result.to_sql(
+        f"{type}_results",
+        con=conn,
+        if_exists="append",
+    )
+
+    logging.info(f"Saved aggregated {type} results for {params.model_name} {params.n_train}.")
+
+
+def save_fe_results(fe_metrics: Dict, params: SimulationParameter, type: Literal["pdp", "ale"]):
+    """
+    Save feature effect results to joblib file.
+
+    Parameters
+    ----------
+    fe_metrics : Dict
+        Feature effect metrics.
+    params : SimulationParameter
+        Simulation parameters.
+    type : Literal[&quot;pdp&quot;, &quot;ale&quot;]
+        Type of feature effect.
+    """
+    os.makedirs(Path(str(params.groundtruth)) / "results" / params.model_name, exist_ok=True)
+    dump(
+        fe_metrics,
+        Path(str(params.groundtruth)) / "results" / params.model_name / f"{type}_metrics_{params.n_train}.joblib",
+    )
+
+    logging.info(f"Saved {type} results for {params.model_name} {params.n_train}.")
+
+
+def _warning_to_logger(message, category, filename, lineno, file=None, line=None):
+    """
+    Convert warnings to log messages.
+    """
+    logging.warning(f"{category.__name__} at {filename} - {lineno}: {message}")
+
+
+def setup_logger(log_dir: Path = Path("logs")):
+    """
+    Setup logging for main process.
+
+    Parameters
+    ----------
+    log_dir : Path, optional
+        Directory for log files, by default Path("logs")
+
+    Returns
+    -------
+    Tuple[multiprocessing.Queue, multiprocessing.QueueListener]
+        Tuple of logging queue and listener.
+    """
+    # Create a queue for passing logging messages between processes
+    queue = multiprocessing.Queue()
+
+    log_dir.mkdir(exist_ok=True)
+
+    # Create file handler
+    file_handler = logging.FileHandler(log_dir / "experiment_logs.log")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s - %(processName)s - %(levelname)s - %(message)s"))
+
+    # Create console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(logging.Formatter("%(asctime)s - %(processName)s - %(levelname)s - %(message)s"))
+
+    # Configure root logger
+    logging.basicConfig(level=logging.INFO, handlers=[file_handler, console_handler])
+
+    # Create a listener that will handle logs from the queue
+    listener = QueueListener(queue, file_handler, console_handler)
+    listener.start()
+
+    # Redirect warnings to logging
+    warnings.showwarning = _warning_to_logger
+
+    return queue, listener
+
+
+def configure_worker_logger(queue):
+    """
+    Configure logging for worker processes.
+    """
+    logger = logging.getLogger()
+    logger.handlers = []  # Remove any existing handlers
+    logger.addHandler(QueueHandler(queue))
+    logger.setLevel(logging.INFO)
+    warnings.showwarning = _warning_to_logger
