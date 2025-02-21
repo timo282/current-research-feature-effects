@@ -26,7 +26,7 @@
 
 %N.B.: Author information (both in the \author{} and \authorrunning{} command) should only be present in the Camera-Ready Version of your paper. The version that you initially submit for review, ought to be double-blind. So, when initially submitting your paper, use:
 %\author{Author information scrubbed for double-blind reviewing}
-\author{Timo Heiß\inst{1}}
+\author{Timo Heiß} % \inst{1}
 % You may leave out the orcidID information, if you want to.
 % Use \corr to indicate the corresponding author. Note the spacing around the \corr command. Only one author can be the corresponding author.
 
@@ -65,7 +65,7 @@
     future research in this area.\footnote{Our entire implementation and results
     are available at \url{https://github.com/timo282/current-research-feature-effects}.}
 
-    \keywords{Interpretable Machine Learning  \and Feature effects \and Partial dependence plot \and Accumulated local effects}
+    \keywords{Interpretable Machine Learning  \and Feature Effects \and Partial Dependence Plot \and Accumulated Local Effects}
 \end{abstract}
 
 \section{Introduction}
@@ -1157,7 +1157,8 @@ unrealistic in practice, it allows us to consider hyperparameters as
 simulation study. Each model was tuned for 200 trials using a
 \textit{Tree-structured Parzen Estimator (TPE)}~\cite{bergstra2011algorithms}
 using validation MSE as objective to minimize (equivalent to maximizing
-R2-score).
+R2-score). Hyperparameter search spaces were chosen following the
+recommendations in~\cite{probst_tunability_2019}.
 
 \begin{table}
     \scriptsize
